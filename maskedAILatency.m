@@ -1,11 +1,11 @@
 function maskedAILatency()
 
 %----------compatibility for windows
-KbName('UnifyKeyNames');
+KbName('UnifyKeyNames');if ispc; clear all; pack; end
 
 %==========================Base Experiment settings==============================
 subject = 'Ian';
-lab = 'aristotle'; %dorris lab or our machine?
+lab = 'lab214_aristotle'; %dorris lab or our machine?
 staircase = true;
 comments = '';
 stimTime = 4;
@@ -16,8 +16,8 @@ sigma = 5;
 discSize = 3;
 maskDelayTimes = [0.04 0.07 0.1 0.12 0.14 0.16 0.2 0.3 0.4];
 
-if strcmpi(lab,'dorrislab_aristotle')
-	calibrationFile=load('Calib_AristotleG520.mat');
+if strcmpi(lab,'lab214_aristotle')
+	calibrationFile=load('Calib-AristotlePC-DG520NEW.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	else 
@@ -27,9 +27,9 @@ if strcmpi(lab,'dorrislab_aristotle')
 	useEyeLink = true;
 	isDummy = false;
 	pixelsPerCm = 26; %26 for Dorris lab G520, 40=Dell LCF, 32=Lab CRT, 44=27"monitor or Macbook Pro
-	distance = 64.5; %64.5 in Dorris lab;
+	distance = 56.8; %64.5 in Dorris lab;
 	windowed = [];
-	useScreen = [2]; %screen 2 in Dorris lab is CRT
+	useScreen = 1; %screen 2 in lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 elseif strcmpi(lab,'aristotle')
 	calibrationFile=[]; %load('Calib_Dell_LCD.mat');
@@ -165,9 +165,9 @@ if staircase == true
 	stopCriterion = 'trials';
 	stopRule = 25;
 	
-	stims = linspace(min(maskDelayTimes),max(maskDelayTimes),50);
-	priorAlphaB = [0:0.01:0.5];
-	priorAlphaW = [0:0.01:0.5];
+	stims = linspace(0.02,0.6,50);
+	priorAlphaB = [0:0.01:0.6];
+	priorAlphaW = [0:0.01:0.6];
 	priorBeta = [0.5:0.5:5];
 	priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter) 
 	priorLambdaRange = [0.02:0.02:0.12]; %ditto
@@ -184,11 +184,11 @@ if staircase == true
 	
 	priorB = PAL_pdfNormal(taskB.priorAlphas,0.2,1).*PAL_pdfNormal(taskB.priorBetas,2,3);
 	priorW = PAL_pdfNormal(taskW.priorAlphas,0.2,1).*PAL_pdfNormal(taskW.priorBetas,2,3);
-	figure; 
-	subplot(1,2,1);imagesc(taskB.priorAlphaRange,taskB.priorBetaRange,priorB);axis square
-	subplot(1,2,2);imagesc(taskB.priorAlphaRange,taskB.priorBetaRange,priorB); axis square
-	xlabel('Threshold');ylabel('Slope');title('Initial Bayesian Priors')
-	
+% 	figure; 
+% 	subplot(1,2,1);imagesc(taskB.priorAlphaRange,taskB.priorBetaRange,priorB);axis square
+% 	subplot(1,2,2);imagesc(taskW.priorAlphaRange,taskW.priorBetaRange,priorW); axis square
+% 	xlabel('Threshold');ylabel('Slope');title('Initial Bayesian Priors')
+
 	taskB = PAL_AMPM_setupPM(taskB,'prior',priorB);
 	taskW = PAL_AMPM_setupPM(taskW,'prior',priorB);
 	
@@ -392,7 +392,7 @@ try %our main experimentqal try catch loop
 			%---------------------get response
 			Priority(0);
 			drawBackground(s);
-			Screen('DrawText',s.win,['See anything AFTER stimulus: [LEFT]=NO [RIGHT]=YES'],0,0);
+			Screen('DrawText',s.win,['See anything AFTER stimulus: [A]=YES [B]=NO'],0,0);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
@@ -506,7 +506,7 @@ end
 	end
 
 %=============================PLOT THE DATA=====================
-	function doPlot(handle)
+	function doPlot()
 		if ~isfield(task.response,'response') || isempty(task.response.response)
 			return
 		end
@@ -562,6 +562,7 @@ end
 			ylabel('Mask Delay (seconds)');
 			hold off
 		end
+		drawnow;
 	end
 
 	function md = saveMetaData()
@@ -602,29 +603,47 @@ end
 	end
 
 	function checkKeys() %----------------------check keyboard
+			rchar = '';
 			ListenChar(2);
-			[~, keyCode] = KbWait(-1);
+			if ispc
+				[buttons, keyCode] = JoyStickWait(0);
+				if any(buttons)
+					if buttons(1) == 1
+						rchar = 'left';
+					elseif buttons(2) == 1
+						rchar = 'right';
+					elseif buttons(3) == 1
+						rchar = 'down';
+					elseif buttons(4) == 1
+						rchar = 'down';
+					end
+				else
+					rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end	
+				end
+			else
+				[~, keyCode] = KbWait(-1);
+				rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end	
+			end
 			tEnd = GetSecs; 
 			ListenChar(0);
-			rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end	
 			switch lower(rchar)
 				case {'leftarrow','left'}
 					breakloopkey = true; fixated = 'no';
 					response = YESSEE;
-					updateResponse();
 					if useEyeLink
 						statusMessage(eL,['Subject Pressed LEFT: response = ' num2str(response)]);
 						edfMessage(eL,['Subject Pressed LEFT: response = ' num2str(response)])
 					end
+					updateResponse();
 					doPlot();
 				case {'rightarrow','right'} %brighter than
 					breakloopkey = true; fixated = 'no';
 					response = NOSEE;
-					updateResponse();
 					if useEyeLink
 						statusMessage(eL,['Subject Pressed RIGHT: response = ' num2str(response)]);
 						edfMessage(eL,['Subject Pressed RIGHT: response = ' num2str(response)])
 					end
+					updateResponse();
 					doPlot();
 				case {'downarrow','down'} %darker than
 					breakloopkey = true; fixated = 'no';
@@ -634,6 +653,7 @@ end
 						statusMessage(eL,'Subject Pressed DOWN!');
 						edfMessage(eL,'Subject Pressed DOWN')
 					end
+					updateResponse();
 					doPlot();
 				case {'backspace','delete'}
 					breakloopkey = true; fixated = 'no';
