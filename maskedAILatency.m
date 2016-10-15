@@ -1,23 +1,27 @@
 function maskedAILatency()
 
 %----------compatibility for windows
-KbName('UnifyKeyNames');if ispc; clear all; pack; end
+KbName('UnifyKeyNames'); %if ispc; clear all; pack; end
 
 %==========================Base Experiment settings==============================
-subject = 'Ian';
+ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
+subject = ans{1};
 lab = 'lab214_aristotle'; %dorris lab or our machine?
 staircase = true;
-comments = '';
-stimTime = 4;
+useGratingMask = true;
+comments = ans{2};
+stimTime = 8;
 maskDelay = 0.35;
 maskTime = 1;
 nBlocks = 128; %number of repeated blocks?
-sigma = 5;
+sigma = 3;
 discSize = 3;
 maskDelayTimes = [0.04 0.07 0.1 0.12 0.14 0.16 0.2 0.3 0.4];
+maxTime = 0.9; %max mask time
+ITI = 1; %inter trial interval
 
 if strcmpi(lab,'lab214_aristotle')
-	calibrationFile=load('Calib-AristotlePC-DG520NEW.mat');
+	calibrationFile=load('Calib-AristotlePC-G5201280x1024x85.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	else 
@@ -26,10 +30,10 @@ if strcmpi(lab,'lab214_aristotle')
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = true;
 	isDummy = false;
-	pixelsPerCm = 26; %26 for Dorris lab G520, 40=Dell LCF, 32=Lab CRT, 44=27"monitor or Macbook Pro
-	distance = 56.8; %64.5 in Dorris lab;
+	pixelsPerCm = 34; %34 G520@1290x1024, 26@1024x768 for Dorris lab G520, 40=Dell LCF, 32=Lab CRT, 44=27"monitor or Macbook Pro
+	distance = 57.7; %64.5 in Dorris lab;
 	windowed = [];
-	useScreen = 1; %screen 2 in lab is CRT
+	useScreen = 2; %screen 2 in lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 elseif strcmpi(lab,'aristotle')
 	calibrationFile=[]; %load('Calib_Dell_LCD.mat');
@@ -79,7 +83,8 @@ firstFixRadius =1.5;
 strictFixation = true;
 
 %----------------Make a name for this run-----------------------
-nameExp = ['AILatency_' subject];
+if staircase; pf='AISTAIRLatency_'; else pf='AILatency_'; end
+nameExp = [pf subject];
 c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 nameExp = [nameExp c];
@@ -165,10 +170,10 @@ if staircase == true
 	stopCriterion = 'trials';
 	stopRule = 25;
 	
-	stims = linspace(0.02,0.6,50);
-	priorAlphaB = [0:0.01:0.6];
-	priorAlphaW = [0:0.01:0.6];
-	priorBeta = [0.5:0.5:5];
+	stims = linspace(0.02,maxTime,50);
+	priorAlphaB = [0:0.01:maxTime];
+	priorAlphaW = [0:0.01:maxTime];
+	priorBeta = [0.5:0.5:4];
 	priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter) 
 	priorLambdaRange = [0.02:0.02:0.12]; %ditto
 	
@@ -182,8 +187,8 @@ if staircase == true
 		'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 		'numTrials', stopRule);
 	
-	priorB = PAL_pdfNormal(taskB.priorAlphas,0.2,1).*PAL_pdfNormal(taskB.priorBetas,2,3);
-	priorW = PAL_pdfNormal(taskW.priorAlphas,0.2,1).*PAL_pdfNormal(taskW.priorBetas,2,3);
+	priorB = PAL_pdfNormal(taskB.priorAlphas,0.25,1).*PAL_pdfNormal(taskB.priorBetas,2,3);
+	priorW = PAL_pdfNormal(taskW.priorAlphas,0.25,1).*PAL_pdfNormal(taskW.priorBetas,2,3);
 % 	figure; 
 % 	subplot(1,2,1);imagesc(taskB.priorAlphaRange,taskB.priorBetaRange,priorB);axis square
 % 	subplot(1,2,2);imagesc(taskW.priorAlphaRange,taskW.priorBetaRange,priorW); axis square
@@ -268,7 +273,7 @@ try %our main experimentqal try catch loop
 		
 		save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		Priority(MaxPriority(s.win));
-		fprintf('===>>>START: maskDelay = %.3g | Colour = %.3g | ',maskDelay,colourOut);
+		fprintf('\n===>>>START %i: maskDelay = %.3g | Colour = %.3g | ',task.totalRuns,maskDelay,colourOut);
 		posloop = posloop + 1;
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();
@@ -377,7 +382,7 @@ try %our main experimentqal try catch loop
 			end
 			
 			%------------------------show mask
-			stimuli.showMask = true; %metaStimulus can trigger a mask
+			if useGratingMask; stimuli.showMask = true; end%metaStimulus can trigger a mask
 			vbl = GetSecs; vbls = vbl;
 			while GetSecs < vbls + maskTime
 				draw(stimuli); %draw stimulus
@@ -421,7 +426,8 @@ try %our main experimentqal try catch loop
 				breakloop = true;
 			end
 		end
-		WaitSecs('YieldSecs',0.5);
+		Priority(0);
+		WaitSecs(ITI);
 	end
 	
 	%=================================Cleanup
@@ -458,7 +464,8 @@ end
 %=============================MEASURE the REPSONSE=====================
 	function updateResponse()
 		if response == NOSEE || response == YESSEE %subject responded
-			fprintf('\tResponse = %i | maskDelay = %.2g | Contrast = %i | Trial = %i\n', response,maskDelay,colourOut,task.totalRuns);
+			fprintf('\tResponse = %i | maskDelay = %.2g | Contrast = %i | Trial = %i ', response,maskDelay,colourOut,task.totalRuns);
+			fprintf(' TIMES: %.2g %.2g %.2g %.2g', tDelay-tStim , tMask-tDelay, tMaskOff-tMask, tEnd-tMaskOff); 
 			task.response.response(task.totalRuns) = response;
 			task.response.N = task.totalRuns;
 			task.response.times(task.totalRuns,:) = [tFix tStim tDelay tMask tMaskOff tEnd];
@@ -501,7 +508,7 @@ end
 			end
 		elseif response == UNSURE
 			task.response.redo = task.response.redo + 1;
-			fprintf(' Subject REDO, overall = %.2g %\n',task.response.redo);
+			fprintf(' Subject REDO, overall = %.2g ',task.response.redo);
 		end
 	end
 
@@ -550,7 +557,7 @@ end
 			t = sprintf('NEXT TRIAL:%i', task.totalRuns);
 			title(t);
 		end
-		box on; grid on; ylim([0 0.4]);
+		box on; grid on; grid minor;
 		xlabel('Total Trials (red=BLACK blue=WHITE)');
 		ylabel('Mask Delay (seconds)');
 		hold off;
@@ -561,6 +568,7 @@ end
 			xlabel('Trials (red=BLACK blue=WHITE)');
 			ylabel('Mask Delay (seconds)');
 			hold off
+			box on; grid on; grid minor;
 		end
 		drawnow;
 	end
@@ -570,6 +578,7 @@ end
 		md.subject = subject;
 		md.lab = lab;
 		md.staircase = staircase;
+		md.useGratingMask = useGratingMask;
 		md.comments = comments;
 		md.calibrationFile = calibrationFile;
 		md.useEyeLink = useEyeLink;
@@ -579,6 +588,8 @@ end
 		md.maskDelay = maskDelay;
 		md.maskTime = maskTime;
 		md.maskDelayTimes = maskDelayTimes;
+		md.maxTime = maxTime;
+		md.ITI = ITI;
 		md.pixelsPerCm = pixelsPerCm; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
 		md.distance = distance; %64.5 in Dorris lab;
 		md.nBlocks = nBlocks; %number of repeated blocks?
@@ -606,7 +617,7 @@ end
 			rchar = '';
 			ListenChar(2);
 			if ispc
-				[buttons, keyCode] = JoyStickWait(0);
+				[buttons, keyCode, xy] = JoyStickWait(0);
 				if any(buttons)
 					if buttons(1) == 1
 						rchar = 'left';
@@ -616,6 +627,10 @@ end
 						rchar = 'down';
 					elseif buttons(4) == 1
 						rchar = 'down';
+					elseif xy(1) == 0
+						rchar = 'c';
+					elseif xy(1) > 65000
+						rchar = 'd';
 					end
 				else
 					rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end	

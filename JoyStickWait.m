@@ -1,4 +1,4 @@
-function [buttons, keyCode, deltaSecs] = JoyStickWait(deviceNumber, untilTime)
+function [buttons, keyCode, xy, deltaSecs] = JoyStickWait(deviceNumber, untilTime)
 
 if nargin < 1
     deviceNumber = 0;
@@ -10,14 +10,16 @@ end
 secs				= GetSecs;
 yieldInterval	= 0.005;
 buttons			= [0,0,0,0];
+xy					= [2^15-1 2^15-1];
 keyCode			= [];
 deltaSecs		= 0;
 
 while secs < untilTime
 	if ispc
-		[~, ~, ~, buttons] = WinJoystickMex(deviceNumber);
+		[x, y, ~, buttons] = WinJoystickMex(deviceNumber);
+		xy = [x y];
 		[isDown, ~, keyCode, deltaSecs] = KbCheck(-1);
-		if any(buttons) || isDown || (secs >= untilTime)
+		if any(buttons) || (x<1000 || x>65000) || (y<100 || y>65000) || isDown || (secs >= untilTime)
 		  return;
 		end
 		% A tribute to Windows: A useless call to GetMouse to trigger
