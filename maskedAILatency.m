@@ -6,7 +6,7 @@ KbName('UnifyKeyNames'); %if ispc; clear all; pack; end
 %==========================Base Experiment settings==============================
 ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
 subject = ans{1};
-lab = 'lab214_aristotle'; %dorris lab or our machine?
+lab = 'aristotle'; %dorris lab or our machine?
 staircase = true;
 useGratingMask = true;
 comments = ans{2};
@@ -28,12 +28,12 @@ if strcmpi(lab,'lab214_aristotle')
 		calibrationFile = [];
 	end
 	backgroundColour = [0.5 0.5 0.5];
-	useEyeLink = true;
-	isDummy = false;
-	pixelsPerCm = 34; %34 G520@1290x1024, 26@1024x768 for Dorris lab G520, 40=Dell LCF, 32=Lab CRT, 44=27"monitor or Macbook Pro
+	useEyeLink = false;
+	isDummy = true;
+	pixelsPerCm = 34; %34 G520@1280x1024, 26@1024x768 for G520, 40=Dell LCF and iMac (retina native), 32=Lab CRT, 44=27"monitor or Macbook Pro
 	distance = 57.7; %64.5 in Dorris lab;
 	windowed = [];
-	useScreen = 2; %screen 2 in lab is CRT
+	useScreen = []; %screen 2 in lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 elseif strcmpi(lab,'aristotle')
 	calibrationFile=[]; %load('Calib_Dell_LCD.mat');
@@ -47,7 +47,7 @@ elseif strcmpi(lab,'aristotle')
 	isDummy = true;
 	pixelsPerCm = 40; %26 for Dorris lab G520, 40=Dell LCF and iMac (retina native), 32=Lab CRT, 44=27"monitor or Macbook Pro
 	distance = 50; %64.5 in Dorris lab;
-	windowed = [1024 768];
+	windowed = [];
 	useScreen = []; %screen 1 in Dorris lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 else
@@ -170,22 +170,22 @@ if staircase == true
 	stopCriterion = 'trials';
 	stopRule = 25;
 	
-	stims = linspace(0.02,maxTime,50);
+	stims = linspace(0.022,maxTime,50);
 	priorAlphaB = [0:0.01:maxTime];
 	priorAlphaW = [0:0.01:maxTime];
-	priorBeta = [0.5:0.5:4];
+	priorBeta = [0.5:0.5:4]; %our slope
 	priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter) 
 	priorLambdaRange = [0.02:0.02:0.12]; %ditto
 	
 	taskB = PAL_AMPM_setupPM('stimRange',stims,'PF',@PAL_Weibull,...
 		'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBeta,...
 		'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-		'numTrials', stopRule);
+		'numTrials', stopRule,'marginalize','lapse');
 	
 	taskW = PAL_AMPM_setupPM('stimRange',stims,'PF',@PAL_Weibull,...
 		'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBeta,...
 		'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-		'numTrials', stopRule);
+		'numTrials', stopRule,'marginalize','lapse');
 	
 	priorB = PAL_pdfNormal(taskB.priorAlphas,0.25,1).*PAL_pdfNormal(taskB.priorBetas,2,3);
 	priorW = PAL_pdfNormal(taskW.priorAlphas,0.25,1).*PAL_pdfNormal(taskW.priorBetas,2,3);
@@ -271,6 +271,8 @@ try %our main experimentqal try catch loop
 		ts.y = YPos(posloop);
 		ts.size = stimuli{1}.size;
 		
+		currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
+		
 		save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		Priority(MaxPriority(s.win));
 		fprintf('\n===>>>START %i: maskDelay = %.3g | Colour = %.3g | ',task.totalRuns,maskDelay,colourOut);
@@ -289,7 +291,8 @@ try %our main experimentqal try catch loop
 			trackerDrawStimuli(eL,ts);
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT');  %this 3 lines set the trial info for the eyelink
 			edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]);  %obj.getTaskIndex gives us which trial we're at
-			edfMessage(eL,['MASKDELAY ' num2str(maskDelay)]); %add in the delay of the current state for good measure
+			edfMessage(eL,['UUID ' currentUUID]); %add a unique ID
+			edfMessage(eL,['MSG:MASKDELAY ' num2str(maskDelay)]); %add in the delay of the current state for good measure
 			startRecording(eL);
 			syncTime(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
@@ -471,7 +474,9 @@ end
 			task.response.times(task.totalRuns,:) = [tFix tStim tDelay tMask tMaskOff tEnd];
 			task.response.contrastOut(task.totalRuns) = colourOut;
 			task.response.maskDelay(task.totalRuns) = maskDelay;
+			task.response.UUID{task.totalRuns} = currentUUID;
 			task.totalRuns = task.totalRuns + 1;
+			
 			if staircase
 				if colourOut == 0
 					task.response.xCurrent = taskB.xCurrent;
