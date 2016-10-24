@@ -6,7 +6,7 @@ KbName('UnifyKeyNames'); %if ispc; clear all; pack; end
 %==========================Base Experiment settings==============================
 ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
 subject = ans{1};
-lab = 'aristotle'; %dorris lab or our machine?
+lab = 'lab214_aristotle'; %which lab or machine?
 staircase = true;
 useGratingMask = true;
 comments = ans{2};

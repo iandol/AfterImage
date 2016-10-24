@@ -5,8 +5,8 @@ function maskedAIContrast()
 KbName('UnifyKeyNames');
 
 %------------Base Experiment settings--------------
-subject = 'HeKY';
-lab = 'dorrislab_aristotle'; %dorris lab or our machine?
+subject = 'GongHL';
+lab = 'lab214_aristotle'; %dorris lab or our machine?
 comments = '';
 useStaircase = false;
 stimTime = 4;
@@ -16,18 +16,18 @@ nBlocks = 128; %number of repeated blocks?
 sigma = 6;
 discSize = 3;
 
-if strcmpi(lab,'dorrislablinear')
-	calibrationFile=load('Calib_Dorris_G520.mat');
+if strcmpi(lab,'lab214_aristotle')
+	calibrationFile=load('Calib-AristotlePC-G5201280x1024x85.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	end
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = true;
 	isDummy = false;
-	pixelsPerCm = 26; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 64.5; %64.5 in Dorris lab;
+	pixelsPerCm = 34; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
+	distance = 57.7; %64.5 in Dorris lab;
 	windowed = [];
-	useScreen = [2]; %screen 2 in Dorris lab is CRT
+	useScreen = 2; %screen 2 in Dorris lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 	pedestalBlackLinear =  [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
 	pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
