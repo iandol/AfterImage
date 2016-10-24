@@ -15,7 +15,7 @@ mm{n}='AISTAIRLatency_GongHL_2016_10_21_21_36_54.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_ChenJH_2016_10_21_21_14_55.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_HeKY_2016_10_17_13_15_48.mat'; n=n+1;
 mm{n}='AISTAIRLatency_LiuYe_2016_10_17_12_47_52.mat'; n=n+1;
-mm{n}='AISTAIRLatency_LiuX_2016_10_15_15_30_51.mat';  n=n+1; %Hui
+mm{n}='AISTAIRLatency_LiuX_2016_10_15_15_30_51.mat';  n=n+1; 
 mm{n}='AISTAIRLatency_Ian_2016_10_15_15_9_16.mat';  n=n+1;
 mm{n}='AISTAIRLatency_Hui_2016_10_15_14_47_40.mat';  n=n+1;
 mm{n}='AISTAIRLatency_ChenZY_2016_10_15_17_15_59'; n=n+1; 

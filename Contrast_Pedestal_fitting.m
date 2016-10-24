@@ -1,6 +1,6 @@
 function Contrast_Pedestal_fitting()
 useFixed = true;
-doModelComparison = true; %do statistical comparison of two PFs?
+doModelComparison = false; %do statistical comparison of two PFs?
 
 pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
 pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
@@ -28,15 +28,14 @@ guessLimits					= [0.01 0.6];
 
 n = 1;
 mm{n}='AIMOC_GongHL_2016_10_24_13_44_56.mat'; n=n+1;
-%mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat';n=n+1;
-%mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat';n=n+1;
-
+%mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat'; n=n+1;
+%mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat'; n=n+1;
 %mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
 mm{n}='AIMOC_LiuYe_2016_9_27_11_14_4.mat'; n=n+1;
-mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat';  n=n+1;
-mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1;
-mm{n}='AIMOC_Ian_2016_9_22_20_4_0.mat';  n=n+1; %Hui
-mm{n}='AIMOC_ChenZY_2016_9_24_15_9_18.mat';  n=n+1;
+mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat'; n=n+1;
+mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1; %<--This is Hui
+mm{n}='AIMOC_Ian_2016_9_22_20_4_0.mat'; n=n+1; 
+mm{n}='AIMOC_ChenZY_2016_9_24_15_9_18.mat'; n=n+1;
 
 if length(mm) < 5
 	xp=2; yp = 2;
@@ -232,12 +231,7 @@ drawnow
 warning on
 
 if doModelComparison
-	options = PAL_minimize('options');  %decrease tolerance (i.e., increase
-	options.TolX = 1e-09;              %precision). This is a good idea,
-	options.TolFun = 1e-09;            %especially in high-dimension
-	options.MaxIter = 10000;           %parameter space.
-	options.MaxFunEvals = 10000;
-
+	
 	paramsValues2D0(1,2) = log10(paramsValues2D0(1,2));
 	paramsValues2D1(1,2) = log10(paramsValues2D1(1,2));
 
@@ -252,47 +246,61 @@ if doModelComparison
 	B = 500;
 
 	figure('Position',[5 5 1000 500],'NumberTitle','off','Name','Contrast Pedestal Fitting')
-	%default comparison (thresholds AND slopes equal, while guess rates and
-	%lapse rates fixed
+	h = waitbar(0,'Fitting General Model, please wait...');
+	
+	%default comparison (thresholds AND slopes equal, while guess rates and lapse rates fixed
 	disp('===> Fitting General Model...')
+	
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF,'maxTries',maxTries,'rangeTries',rangeTries,...
-		'searchOptions',options);
-
+		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
+	
 	subplot(1,3,1);histogram(real(TLRSim),40);hold on
 	title('Model Comparison')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.4f')];
+	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
+	
+	
+	waitbar(0.3,h,'Fitting Threshold Model, please wait...');
 	disp('===> Fitting Threshold Model...')
+	
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserSlopes','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
-		'searchOptions',options);
-
+		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
+	
 	subplot(1,3,2);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Threshold')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.4f')];
+	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
+	
+	
+	waitbar(0.7,h,'Fitting Slope Model, please wait...');
 	disp('===> Fitting Slope Model...')
+	
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserThresholds','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
-		'searchOptions',options);
-
+		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
+	
 	subplot(1,3,3);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Slope')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.4f')];
+	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
+	
+	waitbar(1,h,'Finished!');
+	pause(0.75);
+	close(h);
 end
 
 
