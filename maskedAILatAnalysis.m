@@ -5,6 +5,7 @@ function maskedAILatAnalysis()
 
 PF			= @PAL_Weibull;
 avgF		= @nanmedian;
+errF		= 'CIMEDIAN';
 NOSEE		= 1; 
 YESSEE	= 2;
 
@@ -59,7 +60,7 @@ for i=1:length(mm)
 	load(mm{i},'task','taskB','taskW','md','s'); 
 	if ~isfield(md,'useGratingMask');md.useGratingMask=1;end
 	tit = [md.subject '-' md.lab '-' md.comments '-T=' num2str(md.stimTime) '-GM=' num2str(md.useGratingMask)];
-	fprintf('\nLoaded: %s = %s', mm{i}, tit);
+	fprintf('Loaded: %s = %s\n', mm{i}, tit);
 	[ii, jj] = ind2sub([xp yp],i);
 	p(ii,jj).select();
 	doPlotRaw();
@@ -132,8 +133,8 @@ for i = 1:length(Bthreshold)
 	modelB(i,:) = PF([Bthreshold(i) Bslope(i) Bguess(i) Blapse(i)],StimLevels);
 	modelW(i,:) = PF([Wthreshold(i) Wslope(i) Wguess(i) Wlapse(i)],StimLevels);
 	hold on
-	plot(StimLevels,modelB(i,:),'r-.','LineWidth',1);
-	plot(StimLevels,modelW(i,:),'b-.','LineWidth',1);
+	plot(StimLevels,modelB(i,:),'r-.','LineWidth',0.75);
+	plot(StimLevels,modelW(i,:),'b-.','LineWidth',0.75);
 end
 
 modelBAll = PF([avgF(Bthreshold) avgF(Bslope) avgF(Bguess) avgF(Blapse)],StimLevels);
@@ -141,21 +142,21 @@ modelWAll = PF([avgF(Wthreshold) avgF(Wslope) avgF(Wguess) avgF(Wlapse)],StimLev
 plot(StimLevels,modelBAll,'r-','Color',[0.7 0 0],'LineWidth',3);
 plot(StimLevels,modelWAll,'b-','Color',[0 0 0.7],'LineWidth',3);
 title('Latency Paradigm Psychometric Functions');
-xlabel('Mask Time (s)'),ylabel('Proportion Afterimage Seen');
+xlabel('\Deltat Mask Time \pm1SE (s)'),ylabel('Proportion Afterimage Seen');
 grid on; grid minor; box on
 
-mB = avgF(Bthreshold);
-mW = avgF(Wthreshold);
-mBe = stderr(Bthreshold,'CIMEAN',0.05,avgF);
-mWe = stderr(Wthreshold,'CIMEAN',0.05,avgF);
+[mBe, mB] = stderr(Bthreshold,errF,0.05,avgF);
+[mWe, mW] = stderr(Wthreshold,errF,0.05,avgF);
+
+pval = signrank(Bthreshold,Wthreshold);
 
 if length(mBe)==1
-	e(1)=mBe/2; e(2)=mBe/2; mBe=e;
+	e(1)=mBe; e(2)=mBe; mBe=e;
 else
 	e(1)=mB-mBe(1);e(2)=mBe(2)-mB; mBe=e;
 end
 if length(mWe)==1
-	e(1)=mWe/2; e(2)=mWe/2; mWe=e; 
+	e(1)=mWe; e(2)=mWe; mWe=e; 
 else
 	e(1)=mW-mWe(1);e(2)=mWe(2)-mW; mWe=e;
 end
@@ -171,7 +172,7 @@ text(StimLevels(Wi)+0.01,modelWAll(Wi)+0.01,num2str(mW),'FontSize',20);
 paxes = axes('Position',[0.575 0.16 0.32 0.32]); hold(paxes,'on');
 errorbar(paxes,1:length(mm),Bthreshold,BthresholdErr,'r.','Color',[0.7 0 0],'LineWidth',2,'MarkerSize',40);
 errorbar(paxes,1:length(mm),Wthreshold,WthresholdErr,'b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',40);
-title(paxes,'Threshold'); xlabel(paxes,'Subject Number');ylabel(paxes,'Threshold (s)');box on; grid on;
+title(paxes,'Subject Thresholds'); xlabel(paxes,'Subject Number');ylabel(paxes,'\Deltat Mask Time \pm1SE (s)');box on; grid on;
 xlim([0 length(mm)+1]);ylim([0 0.6]);
 paxes.XTick = [1 2 3 4 5 6];
 
@@ -184,12 +185,12 @@ paxes1 = axes(figH3b,'Position',[0.1 0.1 0.8 0.6]);hold(paxes1,'on');
 paxes2 = axes(figH3b, 'Position',[0.1 0.7 0.8 0.25]);hold(paxes2,'on');
 axes(paxes1);
 for i = 1:length(Bthreshold)
-	plot(StimLevels,modelB(i,:),'r-.','LineWidth',1);
-	plot(StimLevels,modelW(i,:),'b-.','LineWidth',1);
+	plot(StimLevels,modelB(i,:),'r-.','LineWidth',0.75);
+	plot(StimLevels,modelW(i,:),'b-.','LineWidth',0.75);
 end
 plot(StimLevels,modelBAll,'r-','Color',[0.7 0 0],'LineWidth',3);
 plot(StimLevels,modelWAll,'b-','Color',[0 0 0.7],'LineWidth',3);
-xlabel('Mask Time (s)'),ylabel('Proportion Afterimage Seen');
+xlabel('\Deltat Mask Time \pm1SE (s)'),ylabel('Proportion Afterimage Seen');
 grid on; grid minor; box on; xlim([0 0.8])
 
 errorbar(StimLevels(Bi),modelBAll(Bi),mBe(1),mBe(2),'horizontal','r.','Color',[0.7 0 0],'MarkerSize',60,'LineWidth',2);
@@ -201,13 +202,13 @@ axes(paxes2);
 errorbar(Wthreshold,1:length(mm),WthresholdErr,'horizontal','b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',40,'CapSize',20);
 errorbar(Bthreshold,1:length(mm),BthresholdErr,'horizontal','r.','Color',[0.7 0 0],'LineWidth',2,'MarkerSize',40,'CapSize',20);
 ylabel('Subject Number')
-;box on; grid on; grid minor
+box on; grid on; grid minor
 ylim([0 length(mm)+1]); xlim([0 0.8]);
 paxes2.XTickLabel = {''};
 paxes2.YTick = [1 2 3 4 5 6];
 paxes2.YMinorGrid = 'off';
-paxes2.YAxisLocation = 'right';
-title('Latency Paradigm Psychometric Functions');
+%paxes2.YAxisLocation = 'right';
+title(['Latency Paradigm Psychometric Functions p=' num2str(pval)]);
 paxes1.FontSize = 14;
 paxes2.FontSize = 14;
 
@@ -216,17 +217,17 @@ paxes2.FontSize = 14;
 
 figH4 = figure('Position',[10 20 1000 1000],'NumberTitle','off','Name','Subjects Plot','Color',[1 1 1]);
 paxes1 = axes(figH4,'Position',[0.1 0.1 0.6 0.8]);hold(paxes1,'on');
-paxes2 = axes(figH4, 'Position',[0.705 0.1 0.2 0.8]);hold(paxes2,'on');
+paxes2 = axes(figH4, 'Position',[0.7 0.1 0.2 0.8]);hold(paxes2,'on');
 axes(paxes1);
 errorbar(1:length(mm),Bthreshold,BthresholdErr,'r.','Color',[0.7 0 0],'LineWidth',2,'MarkerSize',60,'CapSize',20);
 errorbar(1:length(mm),Wthreshold,WthresholdErr,'b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',60,'CapSize',20);
-title('Subject Thresholds'); xlabel('Subject Number');ylabel('Psychometric Mask Threshold \pm1SE (s)');
+title('Subject Thresholds'); xlabel('Subject Number');ylabel('\Deltat Mask Time \pm1SE (s)');
 paxes1.XLim = [0 length(mm)+1]; paxes1.YLim = [0 0.6];
 paxes1.XTick = [1 2 3 4 5 6]; paxes1.Box = 'on'; grid on; grid minor;
 axes(paxes2); grid on; grid minor;
 for i = 1:length(Bthreshold)
-	plot(modelB(i,:),StimLevels,'r-.','LineWidth',1);
-	plot(modelW(i,:),StimLevels,'b-.','LineWidth',1);
+	plot(modelB(i,:),StimLevels,'r-.','LineWidth',0.75);
+	plot(modelW(i,:),StimLevels,'b-.','LineWidth',0.75);
 end
 plot(modelBAll,StimLevels,'r-','Color',[0.7 0 0],'LineWidth',3);
 plot(modelWAll,StimLevels,'b-','Color',[0 0 0.7],'LineWidth',3);
@@ -238,9 +239,10 @@ text(modelWAll(Wi)+0.025,StimLevels(Wi),num2str(mW),'FontSize',20);
 
 paxes2.XLim = [0.5 1.0]; paxes2.YLim = [0 0.6];
 xlabel('Proportion Afterimage Seen');
-title('Psychometric Functions')
+title(['Psychometric Functions p =' num2str(pval)])
+paxes1.XMinorGrid = 'off';
 paxes2.YTickLabel = {''};
-paxes2.XMinorGrid = 'off';
+paxes2.YMinorGrid = 'off';
 paxes2.Box = 'on';
 paxes1.FontSize = 14;
 paxes2.FontSize = 14;
@@ -289,7 +291,7 @@ warning on
 	function [error,avg] = stderr(data,type,alpha,avgF)
 		if nargin<4 || isempty(avgF); avgF = @nanmean; end
 		if nargin<3 || isempty(alpha); alpha=0.05; end
-		if nargin<2; type='SE';	end
+		if nargin<2 || isempty(type); type='SE';	end
 		if size(type,1)>1; type=reshape(type,1,size(type,1));	end
 		if size(data,1) > 1 && size(data,2) > 1; nvals = size(data,1); else nvals = length(data); end
 		avg=avgF(data);

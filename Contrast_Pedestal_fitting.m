@@ -1,6 +1,6 @@
 function Contrast_Pedestal_fitting()
 useFixed = true;
-doModelComparison = false; %do statistical comparison of two PFs?
+doModelComparison = true; %do statistical comparison of two PFs?
 
 pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
 pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
@@ -27,9 +27,11 @@ lapseLimits					= [0.0001 0.1];
 guessLimits					= [0.01 0.6];
 
 n = 1;
+mm{n}='AIMOC_GongHL_2016_10_24_13_44_56.mat'; n=n+1;
 %mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat';n=n+1;
 %mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat';n=n+1;
-mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
+
+%mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
 mm{n}='AIMOC_LiuYe_2016_9_27_11_14_4.mat'; n=n+1;
 mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat';  n=n+1;
 mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1;
@@ -50,39 +52,41 @@ end
 
 NOSEE =  1; YESBRIGHT = 2; YESDARK = 3;
 
-figH = figure('Position',[5 10 1000 1000],'NumberTitle','off','Name',['Subjects RAW: ' func2str(PF)]);
-figH2 = figure('Position',[5 10 1000 1000],'NumberTitle','off','Name',['Subject Curves: ' func2str(PF)]);
-p = panel(figH);
-p.pack(yp,xp);
-p.margin = [15 15 8 20]; % margin [left bottom right top]
-p.de.margin = [10 15 15 30];
-q=panel(figH2);
-q.pack(yp,xp);
-q.margin = [20 20 20 20]; % margin [left bottom right top]
-q.de.margin = [10 15 15 20];
+figH = figure('Position',[0 30 1000 1000],'NumberTitle','off','Name',['Subjects: ' func2str(PF)]);
+figH2 = figure('Position',[30 30 1000 1000],'NumberTitle','off','Name',['Subjects: ' func2str(PF)]);
+pn = panel(figH);
+pn.pack(xp,yp);
+pn.fontsize = 10;
+pn.margin = [15 15 8 20]; % margin [left bottom right top]
+pn.de.margin = [10 15 15 27];
+qn = panel(figH2);
+qn.pack(xp,yp);
+qn.fontsize = 10;
+qn.margin = [15 15 5 20]; % margin [left bottom right top]
+qn.de.margin = [10 15 15 27];
+
 warning off
 
 for i=1:length(mm)
 	clear task taskB taskW md s stimuli eL;
 	load(mm{i},'task','taskB','taskW','md','s'); fprintf('\nLoaded: %s', mm{i});
-	figure(figH); 
-	[ii,jj]=ind2sub([yp,xp],i);
-	p(ii,jj).select(); 
+	figure(figH);
+	[ii, jj] = ind2sub([xp yp],i); pn(ii,jj).select();
 	doPlotRaw();
-	
+
 	response				= task.response.response;
 	contrastOut			= task.response.contrastOut;
 	pedestal				= task.response.pedestal;
-	
+
 	idxW						= contrastOut == 1;
 	idxB						= contrastOut == 0;
 	idxNOSEE				= response == NOSEE;
 	idxYESBRIGHT		= response == YESBRIGHT;
 	idxYESDARK			= response == YESDARK;
-	
+
 	pedestalB				= unique(pedestal(idxB));
 	pedestalW				= unique(pedestal(idxW));
-	
+
 	a = 1;
 	for j = pedestalB
 		idxP			= pedestal == j;
@@ -96,7 +100,7 @@ for i=1:length(mm)
 		rBr(i,a)	= (db(i,a) + nb(i,a));
 		a = a + 1;
 	end
-	
+
 	a = 1;
 	for j = pedestalW
 		idxP			= pedestal == j;
@@ -110,9 +114,8 @@ for i=1:length(mm)
 		rWr(i,a)	= (bw(i,a) + nw(i,a));
 		a = a + 1;
 	end
-	figure(figH2); 
-	[ii,jj]=ind2sub([yp,xp],i);
-	q(ii,jj).select(); 
+	figure(figH2);
+	[ii, jj] = ind2sub([xp yp],i); qn(ii,jj).select();
 	doPlotCurve();
 end
 
@@ -234,20 +237,20 @@ if doModelComparison
 	options.TolFun = 1e-09;            %especially in high-dimension
 	options.MaxIter = 10000;           %parameter space.
 	options.MaxFunEvals = 10000;
-	
+
 	paramsValues2D0(1,2) = log10(paramsValues2D0(1,2));
 	paramsValues2D1(1,2) = log10(paramsValues2D1(1,2));
-	
+
 	StimLevels = [StimLevels;StimLevels];
 	NumPos = [NumPos0;NumPos1];
 	OutOfNum = [OutOfNum0;OutOfNum1];
 	paramsValues = [paramsValues0;paramsValues1];
 	paramsValues2D = [paramsValues2D0(1,:);paramsValues2D1(1,:)];
-	
+
 	maxTries = 4;
 	rangeTries = [1 1 0 0];
 	B = 500;
-	
+
 	figure('Position',[5 5 1000 500],'NumberTitle','off','Name','Contrast Pedestal Fitting')
 	%default comparison (thresholds AND slopes equal, while guess rates and
 	%lapse rates fixed
@@ -256,7 +259,7 @@ if doModelComparison
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF,'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',options);
-	
+
 	subplot(1,3,1);histogram(real(TLRSim),40);hold on
 	title('Model Comparison')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
@@ -269,7 +272,7 @@ if doModelComparison
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserSlopes','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',options);
-	
+
 	subplot(1,3,2);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Threshold')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
@@ -282,7 +285,7 @@ if doModelComparison
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserThresholds','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',options);
-	
+
 	subplot(1,3,3);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Slope')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
@@ -301,13 +304,13 @@ end
 	function doPlotRaw()
 		x = 1:length(task.response.response);
 		ped = task.response.pedestal;
-		
+
 		idxBr = task.response.contrastOut == 1;
 		idxD = task.response.contrastOut == 0;
 		idxNO = task.response.response == NOSEE;
 		idxYESB = task.response.response == YESBRIGHT;
 		idxYESD = task.response.response == YESDARK;
-		
+
 		cla; line([min(x) max(x)],[0.5 0.5],'LineStyle','--','LineWidth',1);	hold on
 		plot(x(idxNO & idxD), ped(idxNO & idxD),'ro','MarkerFaceColor','r','MarkerSize',8);
 		plot(x(idxNO & idxBr), ped(idxNO & idxBr),'bo','MarkerFaceColor','b','MarkerSize',8);
@@ -315,7 +318,7 @@ end
 		plot(x(idxYESD & idxBr), ped(idxYESD & idxBr),'bv','MarkerFaceColor','w','MarkerSize',8);
 		plot(x(idxYESB & idxD), ped(idxYESB & idxD),'r^','MarkerFaceColor','w','MarkerSize',8);
 		plot(x(idxYESB & idxBr), ped(idxYESB & idxBr),'b^','MarkerFaceColor','w','MarkerSize',8);
-		
+
 		try
 			idx = idxNO & idxD;
 			blackPedestal = ped(idx);
@@ -333,7 +336,7 @@ end
 		catch ME
 			getReport(ME);
 		end
-		
+
 		box on; grid on; grid minor; ylim([0 1]);xlim([1 length(x)]);
 		xlabel('Trials (red=BLACK blue=WHITE)')
 		ylabel('Pedestal Contrast')
@@ -346,37 +349,38 @@ end
 		OutOfNum0=[8 8 8 8 8 8 8 8];
 		NumPos1=rW(i,:)*8;
 		OutOfNum1=[8 8 8 8 8 8 8 8];
-		
+
 		[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
-		
+
 		%Create simple plot
 		PC0=NumPos0./OutOfNum0;
 		PC1=NumPos1./OutOfNum1;
 		PC0Model = PF(paramsValues0,StimLevelsFineGrain);
 		PC1Model = PF(paramsValues1,StimLevelsFineGrain);
-		
+
 		hold on
-		scatter(StimLevels,PC0,50,'MarkerFaceColor',[0.7 0 0],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
-		scatter(StimLevels,PC1,50,'MarkerFaceColor',[0 0 0.7],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
+		scatter(StimLevels,PC0,60,'MarkerFaceColor',[0.7 0 0],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
+		scatter(StimLevels,PC1,60,'MarkerFaceColor',[0 0 0.7],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
 		plot(StimLevelsFineGrain,real(PC0Model),'-','color',[0.7 0 0],'linewidth',2);
 		plot(StimLevelsFineGrain,real(PC1Model),'-','color',[0 0 0.7],'linewidth',2);
 		box on;grid on; grid minor;
-		line([0,0.34],[0.5 0.5],'LineStyle','-.','Color',[0.5 0.5 0.5]);
+		line([0,0.35],[0.5 0.5],'LineStyle','-.','Color',[0.5 0.5 0.5]);
 		xlabel('Pedestal contrast');ylabel('Pedestal seen ratio');
 		t=sprintf('Subject: %s-%s\n T=%.2g / %.2g S=%.2g / %.2g \nE=%.2g / %.2g L=%.2g / %.2g',md.subject,md.lab,...
 			paramsValues0(1),paramsValues1(1),paramsValues0(2),paramsValues1(2),paramsValues0(3),paramsValues1(3),paramsValues0(4),paramsValues1(4));
 		title(t);
-		disp(t);
+		xlim([-0.01 0.34]);ylim([-0.01 1.01]);set(gca,'YTick',[0:0.25:1]);set(gca,'XTick',[0:0.1:0.3]);
 	end
 
 	%===========================================================================
-	function [avg,error] = stderr(data,type,onlyerror)
-		if nargin<3; onlyerror=0; end
-		if nargin<2; type='SE';	end
+	function [error,avg] = stderr(data,type,alpha,avgF)
+		if nargin<4 || isempty(avgF); avgF = @nanmean; end
+		if nargin<3 || isempty(alpha); alpha=0.05; end
+		if nargin<2 || isempty(type); type='SE';	end
 		if size(type,1)>1; type=reshape(type,1,size(type,1));	end
 		if size(data,1) > 1 && size(data,2) > 1; nvals = size(data,1); else nvals = length(data); end
-		avg=nanmean(data);
+		avg=avgF(data);
 		switch(type)
 			case 'SE'
 				err=nanstd(data);
@@ -386,11 +390,11 @@ end
 				error=sqrt(err.^2/nvals);
 				error = error*2;
 			case 'CIMEAN'
-				[error, raw] = bootci(1000,{@nanmean,data},'alpha',0.01);
-				avg = nanmean(raw);
+				[error, raw] = bootci(1000,{@nanmean,data},'alpha',alpha);
+				avg = avgF(raw);
 			case 'CIMEDIAN'
-				[error, raw] = bootci(1000,{@nanmedian,data},'alpha',0.01);
-				avg = nanmedian(raw);
+				[error, raw] = bootci(1000,{@nanmedian,data},'alpha',alpha);
+				avg = avgF(raw);
 			case 'SD'
 				error=nanstd(data);
 			case '2SD'
@@ -417,9 +421,6 @@ end
 				else
 					error=nanvar(diff(data))/(2*nanmean(data));
 				end
-		end
-		if onlyerror==1
-			avg=error;
 		end
 	end
 end
