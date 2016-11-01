@@ -89,29 +89,29 @@ for i=1:length(mm)
 	a = 1;
 	for j = pedestalB
 		idxP			= pedestal == j;
-		d				= response(idxB & idxYESDARK & idxP);
+		d					= response(idxB & idxYESDARK & idxP);
 		db(i,a)		= length(d); %#ok<*SAGROW>
-		b				= response(idxB & idxYESBRIGHT & idxP);
+		b					= response(idxB & idxYESBRIGHT & idxP);
 		bb(i,a)		= length(b);
 		nn				= response(idxB & idxNOSEE & idxP);
 		nb(i,a)		= length(nn);
 		rB(i,a)		= (db(i,a)+0.5*nb(i,a))/8;
 		rBr(i,a)	= (db(i,a) + nb(i,a));
-		a = a + 1;
+		a					= a + 1;
 	end
 
 	a = 1;
 	for j = pedestalW
 		idxP			= pedestal == j;
-		d				= response(idxW & idxYESDARK & idxP);
+		d					= response(idxW & idxYESDARK & idxP);
 		dw(i,a)		= length(d);
-		b				= response(idxW & idxYESBRIGHT & idxP);
+		b					= response(idxW & idxYESBRIGHT & idxP);
 		bw(i,a)		= length(b);
-		n				= response(idxW & idxNOSEE & idxP);
+		n					= response(idxW & idxNOSEE & idxP);
 		nw(i,a)		= length(n);
 		rW(i,a)		= (bw(i,a)+0.5*nw(i,a))/8;
 		rWr(i,a)	= (bw(i,a) + nw(i,a));
-		a = a + 1;
+		a					= a + 1;
 	end
 	figure(figH2);
 	[ii, jj] = ind2sub([xp yp],i); qn(ii,jj).select();

@@ -5,7 +5,7 @@ function maskedAILatAnalysis()
 
 PF			= @PAL_Weibull;
 avgF		= @nanmedian;
-errF		= 'CIMEDIAN';
+errF		= 'SE';
 NOSEE		= 1; 
 YESSEE	= 2;
 
@@ -149,6 +149,7 @@ grid on; grid minor; box on
 [mWe, mW] = stderr(Wthreshold,errF,0.05,avgF);
 
 pval = signrank(Bthreshold,Wthreshold);
+[~,pvalvar] = vartest2(Bthreshold,Wthreshold);
 
 if length(mBe)==1
 	e(1)=mBe; e(2)=mBe; mBe=e;
@@ -166,16 +167,15 @@ Wi = findNearest(StimLevels, mW);
 
 errorbar(StimLevels(Bi),modelBAll(Bi),mBe(1),mBe(2),'horizontal','r.','Color',[0.7 0 0],'MarkerSize',60,'LineWidth',2);
 errorbar(StimLevels(Wi),modelWAll(Wi),mWe(1),mWe(2),'horizontal','b.','Color',[0 0 0.7],'MarkerSize',60,'LineWidth',2);
-text(StimLevels(Bi)+0.01,modelBAll(Bi)+0.01,num2str(mB),'FontSize',20);
-text(StimLevels(Wi)+0.01,modelWAll(Wi)+0.01,num2str(mW),'FontSize',20);
+text(StimLevels(Bi)+0.01,modelBAll(Bi)+0.01,sprintf('%.2g±%.1g',mB,mBe(1)),'FontSize',20);
+text(StimLevels(Wi)+0.01,modelWAll(Wi)+0.01,sprintf('%.2g±%.1g',mW,mWe(1)),'FontSize',20);
 
 paxes = axes('Position',[0.575 0.16 0.32 0.32]); hold(paxes,'on');
 errorbar(paxes,1:length(mm),Bthreshold,BthresholdErr,'r.','Color',[0.7 0 0],'LineWidth',2,'MarkerSize',40);
 errorbar(paxes,1:length(mm),Wthreshold,WthresholdErr,'b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',40);
-title(paxes,'Subject Thresholds'); xlabel(paxes,'Subject Number');ylabel(paxes,'\Deltat Mask Time \pm1SE (s)');box on; grid on;
+title(paxes,sprintf('Subject Thresholds p=%.2g pvar=%.2g',pval,pvalvar)); xlabel(paxes,'Subject Number');ylabel(paxes,'\Deltat Mask Time \pm1SE (s)');box on; grid on;
 xlim([0 length(mm)+1]);ylim([0 0.6]);
 paxes.XTick = [1 2 3 4 5 6];
-
 
 %===================================================================================
 %===============================PLOT PF and ABOVEErrors=============================
@@ -195,8 +195,8 @@ grid on; grid minor; box on; xlim([0 0.8])
 
 errorbar(StimLevels(Bi),modelBAll(Bi),mBe(1),mBe(2),'horizontal','r.','Color',[0.7 0 0],'MarkerSize',60,'LineWidth',2);
 errorbar(StimLevels(Wi),modelWAll(Wi),mWe(1),mWe(2),'horizontal','b.','Color',[0 0 0.7],'MarkerSize',60,'LineWidth',2);
-text(StimLevels(Bi)+0.01,modelBAll(Bi)+0.01,num2str(mB),'FontSize',20);
-text(StimLevels(Wi)+0.01,modelWAll(Wi)+0.01,num2str(mW),'FontSize',20);
+text(StimLevels(Bi)+0.01,modelBAll(Bi)+0.01,sprintf('%.2g±%.1g',mB,mBe(1)),'FontSize',20);
+text(StimLevels(Wi)+0.01,modelWAll(Wi)+0.01,sprintf('%.2g±%.1g',mW,mWe(1)),'FontSize',20);
 
 axes(paxes2);
 errorbar(Wthreshold,1:length(mm),WthresholdErr,'horizontal','b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',40,'CapSize',20);
@@ -208,7 +208,7 @@ paxes2.XTickLabel = {''};
 paxes2.YTick = [1 2 3 4 5 6];
 paxes2.YMinorGrid = 'off';
 %paxes2.YAxisLocation = 'right';
-title(['Latency Paradigm Psychometric Functions p=' num2str(pval)]);
+title(sprintf('Latency Paradigm Psychometric Functions p=%.2g pvar=%.2g',pval,pvalvar));
 paxes1.FontSize = 14;
 paxes2.FontSize = 14;
 
@@ -234,12 +234,12 @@ plot(modelWAll,StimLevels,'b-','Color',[0 0 0.7],'LineWidth',3);
 
 errorbar(modelBAll(Bi),StimLevels(Bi),mBe(1),mBe(2),'vertical','r.','Color',[0.7 0 0],'MarkerSize',60,'LineWidth',2);
 errorbar(modelWAll(Wi),StimLevels(Wi),mWe(1),mWe(2),'vertical','b.','Color',[0 0 0.7],'MarkerSize',60,'LineWidth',2);
-text(modelBAll(Bi)+0.025,StimLevels(Bi),num2str(mB),'FontSize',20);
-text(modelWAll(Wi)+0.025,StimLevels(Wi),num2str(mW),'FontSize',20);
+text(modelBAll(Bi)+0.025,StimLevels(Bi),sprintf('%.2g±%.1g',mB,mBe(1)),'FontSize',20);
+text(modelWAll(Wi)+0.025,StimLevels(Wi),sprintf('%.2g±%.1g',mW,mWe(1)),'FontSize',20);
 
 paxes2.XLim = [0.5 1.0]; paxes2.YLim = [0 0.6];
 xlabel('Proportion Afterimage Seen');
-title(['Psychometric Functions p =' num2str(pval)])
+title(sprintf('Latency Paradigm Psychometric Functions p=%.2g pvar=%.2g',pval,pvalvar));
 paxes1.XMinorGrid = 'off';
 paxes2.YTickLabel = {''};
 paxes2.YMinorGrid = 'off';
