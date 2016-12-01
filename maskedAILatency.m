@@ -68,7 +68,7 @@ else
 end
 
 %-------------------response values, linked to left, up, down
-NOSEE = 0; 	YESSEE = 1; UNSURE = 4;
+NOSEE = 0; 	YESSEE = 1; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
 XPos = [3 1.5 -1.5 -1.5 1.5 -3];
@@ -243,6 +243,7 @@ try %our main experimentqal try catch loop
 	while ~breakloop
 		%==============setup our values and print some info for the trial===========
 		hide(stimuli);
+		response = NaN;
 		stimuli.showMask = false;
 		colourOut = task.outValues{task.totalRuns,1};
 		stimuli{1}.colourOut = colourOut;
@@ -294,9 +295,9 @@ try %our main experimentqal try catch loop
 			edfMessage(eL,['UUID ' currentUUID]); %add a unique ID
 			edfMessage(eL,['MSG:MASKDELAY ' num2str(maskDelay)]); %add in the delay of the current state for good measure
 			startRecording(eL);
-			syncTime(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
+			syncTime(eL);
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				drawCross(s,0.4,[0 0 0 1],fixX,fixY);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
@@ -325,6 +326,7 @@ try %our main experimentqal try catch loop
 					end
 				end
 			end
+			if strcmpi(fixated,'breakfix'); response = BREAKFIX; end
 		else
 			drawCross(s,0.4,[0 0 0 1],fixX,fixY);
 			tFix = Screen('Flip',s.win); %flip the buffer
@@ -357,7 +359,7 @@ try %our main experimentqal try catch loop
 				if tStim==0;tStim=vbl;end
 			end
 			if ~strcmpi(fixated,'fix')
-				statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
+				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
 				continue
 			end
 			
@@ -380,7 +382,7 @@ try %our main experimentqal try catch loop
 				if tDelay==0; tDelay = vbl; end
 			end
 			if ~strcmpi(fixated,'fix')
-				statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
+				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
 				continue
 			end
 			
@@ -606,6 +608,7 @@ end
 		md.NOSEE = NOSEE;
 		md.YESSEE = YESSEE;
 		md.UNSURE = UNSURE;
+		md.BREAKFIX = BREAKFIX;
 		md.XPos = XPos;
 		md.yPos = YPos;
 		

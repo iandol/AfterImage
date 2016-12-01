@@ -8,7 +8,7 @@ pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373   
 StimLevelsB					= fliplr(abs(0.5-pedestalBlackLinear));
 StimLevelsW					= abs(0.5-pedestalWhiteLinear);
 
-StimLevels					= mean([StimLevelsB;StimLevelsW]);
+StimLevels					= mean([StimLevelsB;StimLevelsW])
 StimLevelsFineGrain = linspace(0,max(StimLevels),200);
 
 PF									= @PAL_Weibull;
@@ -200,8 +200,16 @@ hold on
 errorbar([1],paramsValues2D0(1,1),paramsValues2D0(2,1),'Color',[0.7 0 0],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
 errorbar([1],paramsValues2D1(1,1),paramsValues2D1(2,1),'Color',[0 0 0.7],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
 hold off
-title(paxes,'Threshold');
+title(paxes,sprintf('T: %.3g-%.3g %.3g-%.3g',paramsValues2D0(1,1),paramsValues2D0(2,1),paramsValues2D1(1,1),paramsValues2D1(2,1)));
 ylabel(paxes,'Time (s)')
+axis square; grid on;box on;xlim([0.5 1.5]);
+paxes = axes('Position',[0.35 0.75 0.1 0.15]);
+hold on
+errorbar([1],paramsValues2D0(1,2),paramsValues2D0(2,2),'Color',[0.7 0 0],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
+errorbar([1],paramsValues2D1(1,2),paramsValues2D1(2,2),'Color',[0 0 0.7],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
+hold off
+title(paxes,sprintf('S: %.3g-%.3g %.3g-%.3g',paramsValues2D0(1,2),paramsValues2D0(2,2),paramsValues2D1(1,2),paramsValues2D1(2,2)));
+ylabel(paxes,'Slope')
 axis square; grid on;box on;xlim([0.5 1.5]);
 
 if useFixed
@@ -261,7 +269,7 @@ if doModelComparison
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
+	message = ['p_{all}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
 	
 	
@@ -278,7 +286,7 @@ if doModelComparison
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
+	message = ['p_{thresh}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
 	
 	
@@ -295,7 +303,7 @@ if doModelComparison
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
-	message = ['p_{simul}: ' num2str(pTLR,'%5.5g')];
+	message = ['p_{slope}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
 	
 	waitbar(1,h,'Finished!');
