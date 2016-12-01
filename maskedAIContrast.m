@@ -466,6 +466,7 @@ try %our main experimentqal try catch loop
 		save([nameExp '.mat'], 'task', 'taskB', 'taskW', 'md', 's', 'stimuli', 'eL');
 		if ishandle(figH); saveas(figH, [nameExp '.fig']); end
 		disp(['=====SAVE, saved current data to: ' pwd]);
+		Contrast_Pedestal_Fitting([nameExp '.mat']);
 	else
 		eL.saveFile = ''; %blank save file so it doesn't save
 	end
@@ -593,6 +594,7 @@ end
 		md.windowed = windowed;
 		md.useScreen = useScreen; %screen 1 in Dorris lab is CRT
 		md.eyelinkIP = eyelinkIP;
+		md.pedestalRange = pedestalRange;
 		md.pedestalBlackLinear = pedestalBlackLinear;
 		md.pedestalWhiteLinear = pedestalWhiteLinear;
 		md.pedestalBlack = pedestalBlack;

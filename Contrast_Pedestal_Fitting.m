@@ -1,15 +1,48 @@
-function Contrast_Pedestal_fitting()
+function Contrast_Pedestal_Fitting(filename)
 useFixed = true;
 doModelComparison = false; %do statistical comparison of two PFs?
 
-pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
-pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
+if ~exist('filename','var') 
+	filename = '';
+end
 
-StimLevelsB					= fliplr(abs(0.5-pedestalBlackLinear));
-StimLevelsW					= abs(0.5-pedestalWhiteLinear);
+dataSet = 'revision2';
 
-StimLevels					= mean([StimLevelsB;StimLevelsW])
-StimLevelsFineGrain = linspace(0,max(StimLevels),200);
+if strcmpi(dataset,'revision1')
+	pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
+	pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
+	n = 1;
+	mm{n}='AIMOC_GongHL_2016_10_24_13_44_56.mat'; n=n+1;
+	%mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat'; n=n+1;
+	%mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat'; n=n+1;
+	%mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
+	mm{n}='AIMOC_LiuYe_2016_9_27_11_14_4.mat'; n=n+1;
+	mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat'; n=n+1;
+	mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1; %<--This is Hui
+	mm{n}='AIMOC_Ian_2016_9_22_20_4_0.mat'; n=n+1; 
+	mm{n}='AIMOC_ChenZY_2016_9_24_15_9_18.mat'; n=n+1;
+	StimLevelsB					= fliplr(abs(0.5-pedestalBlackLinear));
+	StimLevelsW					= abs(0.5-pedestalWhiteLinear);
+	StimLevels					= mean([StimLevelsB;StimLevelsW]);
+	StimLevelsFineGrain = linspace(0,max(StimLevels),200);
+	nTrials = 8;
+else
+	if ~isempty(filename) && ~iscell(filename)
+		mm{1} = filename;
+	else
+		n = 1;
+		mm{n}='AIMOC_Ian_2016_12_1_11_52_49.mat'; n=n+1;
+		mm{n}='AIMOC_LiuYe_2016_12_1_11_10_11.mat'; n=n+1;
+		mm{n}='AIMOC_LiuXu_2016_12_1_10_24_3.mat'; n=n+1;
+	end
+	pedestalRange = [0:0.05:0.4];
+	pedestalBlackLinear = 0.5 - fliplr(pedestalRange);
+	pedestalWhiteLinear = 0.5 + pedestalRange;
+	StimLevels					= pedestalRange;
+	StimLevelsB = StimLevels; StimLevelsW = StimLevels;
+	StimLevelsFineGrain = linspace(min(StimLevels),max(StimLevels),200);
+	nTrials = 8;
+end
 
 PF									= @PAL_Weibull;
 paramsFree					= [1 1 1 1];
@@ -26,18 +59,11 @@ opts.MaxFunEvals		= 10000;
 lapseLimits					= [0.0001 0.1];
 guessLimits					= [0.01 0.6];
 
-n = 1;
-mm{n}='AIMOC_GongHL_2016_10_24_13_44_56.mat'; n=n+1;
-%mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat'; n=n+1;
-%mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat'; n=n+1;
-%mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
-mm{n}='AIMOC_LiuYe_2016_9_27_11_14_4.mat'; n=n+1;
-mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat'; n=n+1;
-mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1; %<--This is Hui
-mm{n}='AIMOC_Ian_2016_9_22_20_4_0.mat'; n=n+1; 
-mm{n}='AIMOC_ChenZY_2016_9_24_15_9_18.mat'; n=n+1;
-
-if length(mm) < 5
+if length(mm) < 2
+	xp=1; yp = 1;
+elseif length(mm) < 3
+	xp=1; yp = 2;
+elseif length(mm) < 5
 	xp=2; yp = 2;
 elseif length(mm) < 7
 	xp=2; yp = 3;
@@ -118,6 +144,8 @@ for i=1:length(mm)
 	doPlotCurve();
 end
 
+if length(mm) == 1; return; end %no need to do population analysis...
+
 valB			= fliplr(StimLevelsB);
 valW			= StimLevelsW;
 
@@ -125,9 +153,9 @@ Bsterr		= std(rB)/sqrt(length(mm));
 Wsterr		= std(rW)/sqrt(length(mm));
 
 NumPos0			= fliplr(mean(rB))*64;
-OutOfNum0		= [64 64 64 64 64 64 64 64];
+OutOfNum0		= repmat(64,1,length(NumPos0));
 NumPos1			= mean(rW)*64;
-OutOfNum1		= [64 64 64 64 64 64 64 64];
+OutOfNum1		= repmat(64,1,length(NumPos1));
 
 %=====================================ML FIT======================
 
@@ -361,10 +389,11 @@ end
 
 	%===========================================================================
 	function doPlotCurve()
-		NumPos0=fliplr(rB(i,:)*8);
-		OutOfNum0=[8 8 8 8 8 8 8 8];
+		
+		NumPos0=fliplr(rB(i,:)*nTrials);
+		OutOfNum0=repmat(nTrials,1,length(rB));
 		NumPos1=rW(i,:)*8;
-		OutOfNum1=[8 8 8 8 8 8 8 8];
+		OutOfNum1=repmat(nTrials,1,length(rB));
 
 		[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
