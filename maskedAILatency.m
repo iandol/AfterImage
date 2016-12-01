@@ -21,7 +21,7 @@ maxTime = 0.9; %max mask time
 ITI = 1; %inter trial interval
 
 if strcmpi(lab,'lab214_aristotle')
-	calibrationFile=load('Calib-AristotlePC-G5201280x1024x85.mat');
+	calibrationFile=load('Calib-AristotlePC-G5201280x1024x852.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	else 
@@ -30,7 +30,7 @@ if strcmpi(lab,'lab214_aristotle')
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = false;
 	isDummy = true;
-	pixelsPerCm = 34; %34 G520@1280x1024, 26@1024x768 for G520, 40=Dell LCF and iMac (retina native), 32=Lab CRT, 44=27"monitor or Macbook Pro
+	pixelsPerCm = 36; %34 G520@1280x1024, 26@1024x768 for G520, 40=Dell LCF and iMac (retina native), 32=Lab CRT, 44=27"monitor or Macbook Pro
 	distance = 57.7; %64.5 in Dorris lab;
 	windowed = [];
 	useScreen = []; %screen 2 in lab is CRT

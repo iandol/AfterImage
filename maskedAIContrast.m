@@ -5,34 +5,36 @@ function maskedAIContrast()
 KbName('UnifyKeyNames');
 
 %------------Base Experiment settings--------------
-subject = 'GongHL';
+ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
+subject = ans{1};
 lab = 'lab214_aristotle'; %dorris lab or our machine?
-comments = '';
+comments = ans{2};
 useStaircase = false;
 stimTime = 4;
 pedestalTime = 0.35;
-maskTime = 1;
-nBlocks = 128; %number of repeated blocks?
-sigma = 6;
+maskTime = 1.5;
+nBlocks = 144; %number of repeated blocks?
+sigma = 10;
 discSize = 3;
+pedestalRange = [0:0.05:0.4];
 
 if strcmpi(lab,'lab214_aristotle')
-	calibrationFile=load('Calib-AristotlePC-G5201280x1024x85.mat');
+	calibrationFile=load('Calib-AristotlePC-G5201280x1024x852.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	end
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = true;
 	isDummy = false;
-	pixelsPerCm = 34; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 57.7; %64.5 in Dorris lab;
+	pixelsPerCm = 36; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
+	distance = 56.5; %64.5 in Dorris lab;
 	windowed = [];
 	useScreen = 2; %screen 2 in Dorris lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
-	pedestalBlackLinear =  [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
-	pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
-	pedestalBlack =  [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
-	pedestalWhite = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
+	pedestalBlackLinear = 0.5 - fliplr(pedestalRange);
+	pedestalWhiteLinear = 0.5 + pedestalRange;
+	pedestalBlack =  pedestalBlackLinear;
+	pedestalWhite = pedestalWhiteLinear;
 elseif strcmpi(lab,'dorrislab_aristotle')
 	calibrationFile=load('Calib_AristotleG520.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
@@ -81,7 +83,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 1;
 firstFixTime = 0.7;
-firstFixRadius = 1.5;
+firstFixRadius = 2;
 strictFixation = true;
 
 %----------------Make a name for this run-----------------------
@@ -102,7 +104,7 @@ st.sigma = sigma;
 
 %-----mask stimulus
 m = gratingStimulus();
-m.contrast = 0.15;
+m.contrast = 0.25;
 m.angle = 45;
 m.sf = 2;
 m.tf = 2;
@@ -144,7 +146,7 @@ if useEyeLink == true
 	eL.recordData = true; %save EDF file
 	eL.sampleRate = 500;
 	eL.remoteCalibration = false; % manual calibration?
-	eL.calibrationStyle = 'HV9'; % calibration style
+	eL.calibrationStyle = 'HV5'; % calibration style
 	eL.modify.calibrationtargetcolour = [1 1 0];
 	eL.modify.calibrationtargetsize = 0.5;
 	eL.modify.calibrationtargetwidth = 0.01;
@@ -164,7 +166,7 @@ end
 %---------------------------Set up task variables----------------------
 task = stimulusSequence();
 task.name = nameExp;
-task.nBlocks = 64;
+task.nBlocks = 72;
 task.nVar(1).name = 'colour';
 task.nVar(1).stimulus = [1];
 task.nVar(1).values = [0 1];
