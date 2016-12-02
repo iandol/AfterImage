@@ -72,7 +72,7 @@ else
 end
 
 %-------------------response values, linked to left, up, down
-NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4;
+NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
 XPos = [3 1.5 -1.5 -1.5 1.5 -3];
@@ -215,6 +215,7 @@ try %our main experimentqal try catch loop
 	while ~breakloop && task.totalRuns <= task.nRuns
 		%-----setup our values and print some info for the trial
 		hide(stimuli);
+		response = NaN;
 		stimuli.showMask = false;
 		colourOut = task.outValues{task.totalRuns,1};
 		stimuli{1}.colourOut = colourOut;
@@ -231,6 +232,14 @@ try %our main experimentqal try catch loop
 		stimuli{1}.yPositionOut = YPos(posloop);
 		stimuli.maskStimuli{1}.xPositionOut = XPos(posloop);
 		stimuli.maskStimuli{1}.yPositionOut = YPos(posloop);
+		ts.x = XPos(posloop);
+		ts.y = YPos(posloop);
+		ts.size = stimuli{1}.size;
+		
+		save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
+		Priority(MaxPriority(s.win));
+		fprintf('\n===>>>START %i: PEDESTAL = %.3g / %.3g | Colour = %.3g | ',task.totalRuns,pedestal,pedestalLinear,colourOut);
+		
 		posloop = posloop + 1;
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();
@@ -243,13 +252,13 @@ try %our main experimentqal try catch loop
 			trackerDrawFixation(eL); %draw fixation window on eyelink computer
 			%trackerDrawStimuli(eL,ts);
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
-				edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]); ... %obj.getTaskIndex gives us which trial we're at
-				edfMessage(eL,['PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
-				startRecording(eL);
+			edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]); ... %obj.getTaskIndex gives us which trial we're at
+			edfMessage(eL,['PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+			startRecording(eL);
 			syncTime(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
-			eL.verbose = true;
+			syncTime(eL);
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				drawSpot(s,0.1,[1 1 0],fixX,fixY);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
@@ -279,7 +288,7 @@ try %our main experimentqal try catch loop
 					end
 				end
 			end
-			WaitSecs(0.5); eL.verbose = false;
+			if strcmpi(fixated,'breakfix'); response = BREAKFIX; end
 		else
 			drawSpot(s,0.1,[1 1 0],fixX,fixY);
 			tFix = Screen('Flip',s.win); %flip the buffer
@@ -297,7 +306,7 @@ try %our main experimentqal try catch loop
 				draw(stimuli); %draw stimulus
 				drawSpot(s,0.1,[1 1 0],fixX,fixY);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-				if useEyeLink;
+				if useEyeLink
 					getSample(eL); %drawEyePosition(eL);
 					isfix = isFixated(eL);
 					if ~isfix
@@ -310,7 +319,7 @@ try %our main experimentqal try catch loop
 				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
 			if ~strcmpi(fixated,'fix')
-				statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
+				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
 				continue
 			end
 			stimuli{1}.colourOut = pedestal;
@@ -332,7 +341,7 @@ try %our main experimentqal try catch loop
 				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
 			if ~strcmpi(fixated,'fix')
-				statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'BreakFix')
+				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
 				continue
 			end
 			stimuli.showMask = true; %metaStimulus can trigger a mask
@@ -350,8 +359,8 @@ try %our main experimentqal try catch loop
 			end
 			
 			drawBackground(s);
-			Screen('DrawText',s.win,['Did you see anything AFTER stimulus: [LEFT]=NO [RIGHT]=YES'],0,0);
-			if useEyeLink;
+			Screen('DrawText',s.win,['Did you see anything AFTER stimulus: [LEFT]=NO [UP]=BRIGHTER [DOWN]=DARKER [RIGHT]=SHOW AGAIN'],0,0);
+			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
 				edfMessage(eL,'END_RT'); ...
@@ -372,7 +381,7 @@ try %our main experimentqal try catch loop
 							breakloopkey = true; fixated = 'no';
 							response = NOSEE;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject Pressed LEFT!');
 								edfMessage(eL,'Subject Pressed LEFT')
 							end
@@ -381,7 +390,7 @@ try %our main experimentqal try catch loop
 							breakloopkey = true; fixated = 'no';
 							response = YESBRIGHT;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject Pressed RIGHT!');
 								edfMessage(eL,'Subject Pressed RIGHT')
 							end
@@ -390,7 +399,7 @@ try %our main experimentqal try catch loop
 							breakloopkey = true; fixated = 'no';
 							response = YESDARK;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject Pressed RIGHT!');
 								edfMessage(eL,'Subject Pressed RIGHT')
 							end
@@ -399,42 +408,44 @@ try %our main experimentqal try catch loop
 							breakloopkey = true; fixated = 'no';
 							response = UNSURE;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject UNSURE!');
 								edfMessage(eL,'Subject UNSURE')
 							end
 							doPlot();
 						case {'backspace','delete'}
 							breakloopkey = true; fixated = 'no';
-							response = -1;
+							response = BREAKFIX;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject UNDO!');
 								edfMessage(eL,'Subject UNDO')
 							end
 							doPlot();
 						case {'c'} %calibrate
+							response = BREAKFIX;
 							breakloopkey = true; fixated = 'no';
 							stopRecording(eL);
 							setOffline(eL);
 							trackerSetup(eL);
 							WaitSecs(2);
 						case {'d'}
+							response = BREAKFIX;
 							breakloopkey = true; fixated = 'no';
 							stopRecording(eL);
 							setOffline(eL);
 							success = driftCorrection(eL);
 							WaitSecs(2);
 						case {'q'} %quit
+							response = BREAKFIX;
 							breakloopkey = true; fixated = 'no';
 							fprintf('\n!!!QUIT!!!\n');
-							response = NaN;
 							breakloop = true;
 						otherwise
 							breakloopkey = true; fixated = 'no';
 							response = UNSURE;
 							updateResponse();
-							if useEyeLink;
+							if useEyeLink
 								statusMessage(eL,'Subject UNSURE!');
 								edfMessage(eL,'Subject UNSURE')
 							end
@@ -605,6 +616,7 @@ end
 		md.YESBRIGHT = YESBRIGHT;
 		md.YESDARK = YESDARK;
 		md.UNSURE = UNSURE;
+		md.BREAKFIX = BREAKFIX;
 		md.XPos = XPos;
 		md.yPos = YPos;
 		
