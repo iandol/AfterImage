@@ -1,12 +1,17 @@
-function Contrast_Pedestal_Fitting(filename)
+function Contrast_Pedestal_Fitting(filename,doModelComparison,doModelComparisonSingle)
+
 useFixed = true;
-doModelComparison = false; %do statistical comparison of two PFs?
+dataSet = 'revision2';
 
 if ~exist('filename','var') 
 	filename = '';
 end
-
-dataSet = 'revision2';
+if ~exist('doModelComparison','var') || isempty(doModelComparison)
+	doModelComparison = false; %do statistical comparison of two PFs?
+end
+if ~exist('doModelComparisonSingle','var') || isempty(doModelComparisonSingle)
+	doModelComparisonSingle = false; %statistical comparison for individual subject?
+end
 
 if strcmpi(dataset,'revision1')
 	pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
@@ -94,7 +99,7 @@ warning off
 
 for i=1:length(mm)
 	clear task taskB taskW md s stimuli eL;
-	load(mm{i},'task','taskB','taskW','md','s'); fprintf('\nLoaded: %s', mm{i});
+	load(mm{i},'task','taskB','taskW','md','s'); fprintf('\nLoaded: %s\n', mm{i});
 	figure(figH);
 	[ii, jj] = ind2sub([xp yp],i); pn(ii,jj).select();
 	doPlotRaw();
@@ -121,7 +126,7 @@ for i=1:length(mm)
 		bb(i,a)		= length(b);
 		nn				= response(idxB & idxNOSEE & idxP);
 		nb(i,a)		= length(nn);
-		rB(i,a)		= (db(i,a)+0.5*nb(i,a))/8;
+		rB(i,a)		= (db(i,a)+0.5*nb(i,a))/nTrials;
 		rBr(i,a)	= (db(i,a) + nb(i,a));
 		a					= a + 1;
 	end
@@ -135,7 +140,7 @@ for i=1:length(mm)
 		bw(i,a)		= length(b);
 		n					= response(idxW & idxNOSEE & idxP);
 		nw(i,a)		= length(n);
-		rW(i,a)		= (bw(i,a)+0.5*nw(i,a))/8;
+		rW(i,a)		= (bw(i,a)+0.5*nw(i,a))/nTrials;
 		rWr(i,a)	= (bw(i,a) + nw(i,a));
 		a					= a + 1;
 	end
@@ -200,9 +205,9 @@ paramsValues2D1(1,2) = 10.^paramsValues2D1(1,2);
 pV0 = paramsValues2D0(1,:);
 pV1 = paramsValues2D1(1,:);
 
-fprintf('\n===BAYESEXIT: -- BLACK Parameters: '); disp(pV0)
+fprintf('\n\n===BAYESEXIT: -- BLACK Parameters: '); disp(pV0)
 fprintf('\n===BAYESEXIT: -- WHITE Parameters: '); disp(pV1)
-
+fprintf('\n\n');
 
 %===================================================PLOT========================================
 
@@ -412,10 +417,29 @@ end
 		box on;grid on; grid minor;
 		line([0,0.35],[0.5 0.5],'LineStyle','-.','Color',[0.5 0.5 0.5]);
 		xlabel('Pedestal contrast');ylabel('Pedestal seen ratio');
-		t=sprintf('Subject: %s-%s\n T=%.2g / %.2g S=%.2g / %.2g \nE=%.2g / %.2g L=%.2g / %.2g',md.subject,md.lab,...
+		t=sprintf('Subject: %s\n T=%.2g / %.2g S=%.2g / %.2g \nE=%.2g / %.2g L=%.2g / %.2g',[md.subject '-' md.lab '-' md.comments],...
 			paramsValues0(1),paramsValues1(1),paramsValues0(2),paramsValues1(2),paramsValues0(3),paramsValues1(3),paramsValues0(4),paramsValues1(4));
 		title(t);
-		xlim([-0.01 0.34]);ylim([-0.01 1.01]);set(gca,'YTick',[0:0.25:1]);set(gca,'XTick',[0:0.1:0.3]);
+		xlim([-0.01 inf]);ylim([-0.01 1.01]);set(gca,'YTick',[0:0.25:1]);set(gca,'XTick',[0:0.1:0.4]);
+	
+		
+		if doModelComparisonSingle
+			ht=text(0,0.9,'Please Wait, comparing models...','horizontalalignment','left','fontsize',14,'fontweight','bold');
+			drawnow;
+			
+			SL = [StimLevels;StimLevels];
+			NP = [NumPos0;NumPos1];
+			OON = [OutOfNum0;OutOfNum1];
+			PV = [paramsValues0;paramsValues1];
+			
+			[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
+				PAL_PFLR_ModelComparison(SL, NP, OON, PV, ...
+				500, PF,'maxTries', 4,'rangeTries', [1 1 0 0],...
+				'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
+			message = ['Model Comparison P = ' num2str(pTLR,'%5.5g')];
+			ht.String = message;
+		end
+	
 	end
 
 	%===========================================================================
