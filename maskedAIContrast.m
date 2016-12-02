@@ -11,10 +11,10 @@ lab = 'lab214_aristotle'; %dorris lab or our machine?
 comments = ans{2};
 useStaircase = false;
 stimTime = 4;
-pedestalTime = 0.35;
+pedestalTime = 0.4;
 maskTime = 1.5;
 nBlocks = 144; %number of repeated blocks?
-sigma = 10;
+sigma = 15;
 discSize = 3;
 pedestalRange = [0:0.05:0.4];
 
@@ -83,7 +83,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 1;
 firstFixTime = 0.7;
-firstFixRadius = 2;
+firstFixDiameter = 1.5;
 strictFixation = true;
 
 %----------------Make a name for this run-----------------------
@@ -153,7 +153,7 @@ if useEyeLink == true
 	eL.modify.waitformodereadytime = 500;
 	eL.modify.devicenumber = -1; % -1 = use any keyboard
 	% X, Y, FixInitTime, FixTime, Radius, StrictFix
-	updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strictFixation);
+	updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixDiameter, strictFixation);
 	initialise(eL, s);
 	setup(eL);
 	Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
@@ -235,10 +235,11 @@ try %our main experimentqal try catch loop
 		ts.x = XPos(posloop);
 		ts.y = YPos(posloop);
 		ts.size = stimuli{1}.size;
+		ts.selected = true;
 		
 		save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		Priority(MaxPriority(s.win));
-		fprintf('\n===>>>START %i: PEDESTAL = %.3g / %.3g | Colour = %.3g | ',task.totalRuns,pedestal,pedestalLinear,colourOut);
+		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.totalRuns,pedestal,colourOut);
 		
 		posloop = posloop + 1;
 		stimuli.update();
@@ -247,15 +248,14 @@ try %our main experimentqal try catch loop
 		%-----initialise eyelink and draw fix spaot
 		if useEyeLink
 			resetFixation(eL);
-			updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strictFixation);
+			updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixDiameter, strictFixation);
 			trackerClearScreen(eL);
 			trackerDrawFixation(eL); %draw fixation window on eyelink computer
-			%trackerDrawStimuli(eL,ts);
+			trackerDrawStimuli(eL,ts);
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
 			edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]); ... %obj.getTaskIndex gives us which trial we're at
 			edfMessage(eL,['PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
 			startRecording(eL);
-			syncTime(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
 			syncTime(eL);
@@ -328,7 +328,7 @@ try %our main experimentqal try catch loop
 				draw(stimuli); %draw stimulus
 				drawSpot(s,0.1,[1 1 0],fixX,fixY);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-				if useEyeLink;
+				if useEyeLink
 					getSample(eL); %drawEyePosition(eL);
 					isfix = isFixated(eL);
 					if ~isfix
@@ -349,9 +349,7 @@ try %our main experimentqal try catch loop
 			while GetSecs <= tMask + maskTime
 				draw(stimuli); %draw stimulus
 				drawSpot(s,0.1,[1 1 0],fixX,fixY);
-				% 				if useEyeLink == true;
-				% 					getSample(eL); %drawEyePosition(eL);
-				% 				end
+				%if useEyeLink == true; getSample(eL); %drawEyePosition(eL);	end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(stimuli); %animate stimulus, will be seen on next draw
 				nextvbl = vbl + screenVals.halfisi;
@@ -415,7 +413,7 @@ try %our main experimentqal try catch loop
 							doPlot();
 						case {'backspace','delete'}
 							breakloopkey = true; fixated = 'no';
-							response = BREAKFIX;
+							response = -10;
 							updateResponse();
 							if useEyeLink
 								statusMessage(eL,'Subject UNDO!');
@@ -515,7 +513,7 @@ end
 			else
 				taskW.totalRuns = taskW.totalRuns + 1;
 			end
-		elseif response == -1
+		elseif response == -10
 			if task.totalRuns > 1
 				fprintf('Subject RESET of trial %i -- ', task.totalRuns);
 				task.totalRuns = task.totalRuns - 1;
@@ -624,7 +622,7 @@ end
 		md.fixY = fixY;
 		md.firstFixInit = firstFixInit;
 		md.firstFixTime = firstFixTime;
-		md.firstFixRadius = firstFixRadius;
+		md.firstFixRadius = firstFixDiameter;
 		md.strictFixation = strictFixation;
 		
 	end

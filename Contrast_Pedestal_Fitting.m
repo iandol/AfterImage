@@ -34,6 +34,8 @@ if strcmpi(dataset,'revision1')
 else
 	if ~isempty(filename) && ~iscell(filename)
 		mm{1} = filename;
+	elseif iscell(filename)
+		mm = filename;
 	else
 		n = 1;
 		mm{n}='AIMOC_Ian_2016_12_1_11_52_49.mat'; n=n+1;
@@ -116,6 +118,8 @@ for i=1:length(mm)
 
 	pedestalB				= unique(pedestal(idxB));
 	pedestalW				= unique(pedestal(idxW));
+	
+	noSEEWeight = 0.5;
 
 	a = 1;
 	for j = pedestalB
@@ -126,7 +130,7 @@ for i=1:length(mm)
 		bb(i,a)		= length(b);
 		nn				= response(idxB & idxNOSEE & idxP);
 		nb(i,a)		= length(nn);
-		rB(i,a)		= (db(i,a)+0.5*nb(i,a))/nTrials;
+		rB(i,a)		= (db(i,a) + nb(i,a) * noSEEWeight )/nTrials;
 		rBr(i,a)	= (db(i,a) + nb(i,a));
 		a					= a + 1;
 	end
@@ -140,7 +144,7 @@ for i=1:length(mm)
 		bw(i,a)		= length(b);
 		n					= response(idxW & idxNOSEE & idxP);
 		nw(i,a)		= length(n);
-		rW(i,a)		= (bw(i,a)+0.5*nw(i,a))/nTrials;
+		rW(i,a)		= (bw(i,a) + nw(i,a) * noSEEWeight )/nTrials;
 		rWr(i,a)	= (bw(i,a) + nw(i,a));
 		a					= a + 1;
 	end
