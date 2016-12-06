@@ -1,59 +1,29 @@
-function Contrast_Pedestal_Fitting(filename,doModelComparison,doModelComparisonSingle)
+function Contrast_Pedestal_Fitting(filename, st)
 
-useFixed = true;
-dataSet = 'revision2';
-
-if ~exist('filename','var') 
+if ~exist('filename','var')
 	filename = '';
 end
-if ~exist('doModelComparison','var') || isempty(doModelComparison)
-	doModelComparison = false; %do statistical comparison of two PFs?
-end
-if ~exist('doModelComparisonSingle','var') || isempty(doModelComparisonSingle)
-	doModelComparisonSingle = false; %statistical comparison for individual subject?
+if ~isempty(filename) && ~iscell(filename)
+		mm{1} = filename;
+elseif iscell(filename)
+		mm = filename;
+else
+	error('No valid files to load');
 end
 
-if strcmpi(dataset,'revision1')
-	pedestalBlackLinear = [0.1725    0.2196    0.2667    0.3137    0.3608    0.4078    0.4549    0.5];
-	pedestalWhiteLinear = [ 0.5    0.5490    0.5961    0.6431    0.6902    0.7373    0.7843    0.8314];
-	n = 1;
-	mm{n}='AIMOC_GongHL_2016_10_24_13_44_56.mat'; n=n+1;
-	%mm{n}='AIMOC_GongHL_2016_10_21_21_54_21.mat'; n=n+1;
-	%mm{n}='AIMOC_ChenJH_2016_10_21_20_46_48.mat'; n=n+1;
-	%mm{n}='AIMOC_HeKY_2016_9_28_13_16_14.mat'; n=n+1;
-	mm{n}='AIMOC_LiuYe_2016_9_27_11_14_4.mat'; n=n+1;
-	mm{n}='AIMOC_LiuXu_2016_9_24_13_13_56.mat'; n=n+1;
-	mm{n}='AIMOC_Ian_2016_9_22_19_37_43.mat'; n=n+1; %<--This is Hui
-	mm{n}='AIMOC_Ian_2016_9_22_20_4_0.mat'; n=n+1; 
-	mm{n}='AIMOC_ChenZY_2016_9_24_15_9_18.mat'; n=n+1;
-	StimLevelsB					= fliplr(abs(0.5-pedestalBlackLinear));
-	StimLevelsW					= abs(0.5-pedestalWhiteLinear);
-	StimLevels					= mean([StimLevelsB;StimLevelsW]);
-	StimLevelsFineGrain = linspace(0,max(StimLevels),200);
-	nTrials = 8;
-else
-	if ~isempty(filename) && ~iscell(filename)
-		mm{1} = filename;
-	elseif iscell(filename)
-		mm = filename;
-	else
-		n = 1;
-		mm{n}='AIMOC_Ian_2016_12_1_11_52_49.mat'; n=n+1;
-		mm{n}='AIMOC_LiuYe_2016_12_1_11_10_11.mat'; n=n+1;
-		mm{n}='AIMOC_LiuXu_2016_12_1_10_24_3.mat'; n=n+1;
-	end
-	pedestalRange = [0:0.05:0.4];
-	pedestalBlackLinear = 0.5 - fliplr(pedestalRange);
-	pedestalWhiteLinear = 0.5 + pedestalRange;
-	StimLevels					= pedestalRange;
-	StimLevelsB = StimLevels; StimLevelsW = StimLevels;
-	StimLevelsFineGrain = linspace(min(StimLevels),max(StimLevels),200);
-	nTrials = 8;
+if ~exist('st','var')  || isempty(st)
+	st.useFixed = true;
+	st.pedestalRange = [0:0.05:0.4];
+	st.pedestalBlackLinear = 0.5 - fliplr(st.pedestalRange);
+	st.pedestalWhiteLinear = 0.5 + st.pedestalRange;
+	st.StimLevels					= st.pedestalRange;
+	st.StimLevelsFineGrain = linspace(min(st.StimLevels),max(st.StimLevels),200);
+	st.nTrials = 8;
 end
 
 PF									= @PAL_Weibull;
 paramsFree					= [1 1 1 1];
-searchGrid.alpha		= StimLevelsFineGrain;
+searchGrid.alpha		= st.StimLevelsFineGrain;
 searchGrid.beta			= linspace(0.5, 5, 100);
 searchGrid.gamma		= linspace(0.01,0.6,30);
 searchGrid.lambda		= 0.001;
@@ -101,7 +71,7 @@ warning off
 
 for i=1:length(mm)
 	clear task taskB taskW md s stimuli eL;
-	load(mm{i},'task','taskB','taskW','md','s'); fprintf('\nLoaded: %s\n', mm{i});
+	load(mm{i},'task','taskB','taskW','md','s'); fprintf('\n=>=> Loaded: %s\n', mm{i});
 	figure(figH);
 	[ii, jj] = ind2sub([xp yp],i); pn(ii,jj).select();
 	doPlotRaw();
@@ -118,8 +88,6 @@ for i=1:length(mm)
 
 	pedestalB				= unique(pedestal(idxB));
 	pedestalW				= unique(pedestal(idxW));
-	
-	noSEEWeight = 0.5;
 
 	a = 1;
 	for j = pedestalB
@@ -130,7 +98,7 @@ for i=1:length(mm)
 		bb(i,a)		= length(b);
 		nn				= response(idxB & idxNOSEE & idxP);
 		nb(i,a)		= length(nn);
-		rB(i,a)		= (db(i,a) + nb(i,a) * noSEEWeight )/nTrials;
+		rB(i,a)		= (db(i,a) + nb(i,a) * st.noSEEWeight )/st.nTrials;
 		rBr(i,a)	= (db(i,a) + nb(i,a));
 		a					= a + 1;
 	end
@@ -144,46 +112,74 @@ for i=1:length(mm)
 		bw(i,a)		= length(b);
 		n					= response(idxW & idxNOSEE & idxP);
 		nw(i,a)		= length(n);
-		rW(i,a)		= (bw(i,a) + nw(i,a) * noSEEWeight )/nTrials;
+		rW(i,a)		= (bw(i,a) + nw(i,a) * st.noSEEWeight )/st.nTrials;
 		rWr(i,a)	= (bw(i,a) + nw(i,a));
 		a					= a + 1;
 	end
 	figure(figH2);
 	[ii, jj] = ind2sub([xp yp],i); qn(ii,jj).select();
-	doPlotCurve();
+	[model0(i,:), model1(i,:)] = doPlotCurve();
 end
 
 if length(mm) == 1; return; end %no need to do population analysis...
 
-valB			= fliplr(StimLevelsB);
-valW			= StimLevelsW;
+%%%%%%%%%%%%%%%%%%%%statistics on crossing point%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for i=1:length(mm)
+	Bup=find(model0(i,:)>=0.499);
+	Wup=find(model1(i,:)>=0.499);
+	Bcross=Bup(1);
+	Wcross=Wup(1);
+	BcrossContrast(i)=(st.StimLevelsFineGrain(Bcross));
+	WcrossContrast(i)=(st.StimLevelsFineGrain(Wcross));
+end
+
+g = getDensity('x',BcrossContrast,'y',WcrossContrast,...
+	'legendtxt',{'DARK','BRIGHT'},'columnlabels',{'Contrast Crossing'});
+g.run;
+
+%%%%%%%%%%%%%%%%%%%%%%statistics on integrals%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for i=1:length(mm)
+	kB=find(model0(i,:)>0.5);
+	kW=find(model1(i,:)>0.5);
+	Whight=0.5-model1(i,1:kW(1)-1);
+	Bhight=0.5-model0(i,1:kB(1)-1);
+	IntW(i)=sum(Whight*0.4/50);
+	IntB(i)=sum(Bhight*0.4/50);
+end
+
+g = getDensity('x',IntB,'y',IntW,...
+	'legendtxt',{'DARK','BRIGHT'},'columnlabels',{'Contrast Integral'});
+g.run;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 Bsterr		= std(rB)/sqrt(length(mm));
 Wsterr		= std(rW)/sqrt(length(mm));
 
-NumPos0			= fliplr(mean(rB))*64;
-OutOfNum0		= repmat(64,1,length(NumPos0));
-NumPos1			= mean(rW)*64;
-OutOfNum1		= repmat(64,1,length(NumPos1));
+NumPos0			= fliplr(mean(rB))*st.totalT;
+OutOfNum0		= repmat(st.totalT,1,length(NumPos0));
+NumPos1			= mean(rW)*st.totalT;
+OutOfNum1		= repmat(st.totalT,1,length(NumPos1));
 
 %=====================================ML FIT======================
 
 disp(['-->Performing Psychometric Fitting using: ' func2str(PF)]);
-[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
+[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(st.StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 fprintf('\n===EXIT: %i LL=%.2g -- Luminance BLACK Parameters: ',exitflag0,LL0)
 disp(paramsValues0)
 fprintf(' message: %s\n',message.message);
 
-[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(StimLevels,NumPos1,OutOfNum1,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
+[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(st.StimLevels,NumPos1,OutOfNum1,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 fprintf('\n===EXIT: %i LL=%.2g -- Luminance WHITE Parameters: ',exitflag1,LL1)
 disp(paramsValues1)
 fprintf(' message: %s\n',message.message);
 
 %=====================================BAYES FIT======================
-grain = 300;
-searchGrid.alpha = linspace(0.01,max(StimLevels),grain);
-searchGrid.beta = log10(linspace(0.5,10,grain));  %log-transformed values for beta
-if useFixed %---fixed parameters
+searchGrid.alpha = linspace(0.01,max(st.StimLevels), st.grain);
+searchGrid.beta = log10(linspace(0.5,10, st.grain));  %log-transformed values for beta
+if st.useFixed %---fixed parameters
 	searchGrid.gamma = paramsValues0(3); %mean([paramsValues0(3) paramsValues1(3)]);
 	searchGrid.lambda = paramsValues0(4); %mean([paramsValues0(4) paramsValues1(4)]);
 	searchGrid1 = searchGrid;
@@ -200,8 +196,8 @@ prior = PAL_pdfNormal(a,0.2,0.1).*PAL_pdfNormal(b,log10(1),1); %last two terms d
 prior = prior./sum(sum(sum(sum(prior))));   %normalization happens here
 %figure;contour(10.^searchGrid.beta,searchGrid.alpha,prior);title('Bayesian Prior');colorbar
 
-[paramsValues2D0, posterior2D0] = PAL_PFBA_Fit(StimLevels, NumPos0, OutOfNum0, searchGrid, PF);
-[paramsValues2D1, posterior2D1] = PAL_PFBA_Fit(StimLevels, NumPos1, OutOfNum1, searchGrid1, PF);
+[paramsValues2D0, posterior2D0] = PAL_PFBA_Fit(st.StimLevels, NumPos0, OutOfNum0, searchGrid, PF);
+[paramsValues2D1, posterior2D1] = PAL_PFBA_Fit(st.StimLevels, NumPos1, OutOfNum1, searchGrid1, PF);
 
 paramsValues2D0(1,2) = 10.^paramsValues2D0(1,2);
 paramsValues2D1(1,2) = 10.^paramsValues2D1(1,2);
@@ -217,18 +213,18 @@ fprintf('\n\n');
 
 PC0=NumPos0./OutOfNum0;
 PC1=NumPos1./OutOfNum1;
-PC0Model = PF(paramsValues0,StimLevelsFineGrain);
-PC1Model = PF(paramsValues1,StimLevelsFineGrain);
-Model0 = PF(pV0,StimLevelsFineGrain);
-Model1 = PF(pV1,StimLevelsFineGrain);
+PC0Model = PF(paramsValues0,st.StimLevelsFineGrain);
+PC1Model = PF(paramsValues1,st.StimLevelsFineGrain);
+Model0 = PF(pV0,st.StimLevelsFineGrain);
+Model1 = PF(pV1,st.StimLevelsFineGrain);
 
 figure('Position',[5 5 1000 1000],'NumberTitle','off','Name','Bayesian Contrast Pedestal Fitting');hold on
-errorbar(StimLevels,PC0,fliplr(Bsterr),'Color',[0.7 0 0],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
-errorbar(StimLevels,PC1,Wsterr,'Color',[0 0 0.7],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
-plot(StimLevelsFineGrain,PC0Model,'-.','color',[0.7 0 0],'linewidth',1);
-plot(StimLevelsFineGrain,PC1Model,'-.','color',[0 0 0.7],'linewidth',1);
-plot(StimLevelsFineGrain,Model0,'-','color',[0.7 0 0],'linewidth',2);
-plot(StimLevelsFineGrain,Model1,'-','color',[0 0 0.7],'linewidth',2);
+errorbar(st.StimLevels,PC0,fliplr(Bsterr),'Color',[0.7 0 0],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
+errorbar(st.StimLevels,PC1,Wsterr,'Color',[0 0 0.7],'linewidth',2,'Linestyle','none','Marker','.','MarkerSize',30);
+plot(st.StimLevelsFineGrain,PC0Model,'-.','color',[0.7 0 0],'linewidth',1);
+plot(st.StimLevelsFineGrain,PC1Model,'-.','color',[0 0 0.7],'linewidth',1);
+plot(st.StimLevelsFineGrain,Model0,'-','color',[0.7 0 0],'linewidth',2);
+plot(st.StimLevelsFineGrain,Model1,'-','color',[0 0 0.7],'linewidth',2);
 line([0,0.35],[0.5 0.5],'LineStyle',':','Color',[0.5 0.5 0.5],'linewidth',2)
 title(['Contrast nulling experiment: ' func2str(PF)]);xlabel('Pedestal contrast');ylabel('Pedestal seen ratio');
 grid on;grid minor; box on
@@ -249,7 +245,7 @@ title(paxes,sprintf('S: %.3g-%.3g %.3g-%.3g',paramsValues2D0(1,2),paramsValues2D
 ylabel(paxes,'Slope')
 axis square; grid on;box on;xlim([0.5 1.5]);
 
-if useFixed
+if st.useFixed
 	%posterior = posterior2D0 + posterior2D1;
 	if ~any(isnan(posterior2D0(:))) || ~any(isnan(posterior2D1(:)))
 		paxes = axes('Position',[0.6 0.14 0.3 0.3]);
@@ -266,7 +262,7 @@ if useFixed
 		title(paxes,'Posterior Distribution \pm 95% CI')
 	end
 	% +-95% CI
-	errMult = 1.9;
+	errMult = 1.96;
 	line([paramsValues2D0(1,2), paramsValues2D0(1,2)],[paramsValues2D0(1,1)-(paramsValues2D0(2,1)*errMult), paramsValues2D0(1,1)+(paramsValues2D0(2,1)*errMult)],'LineWidth',2);
 	line([paramsValues2D1(1,2), paramsValues2D1(1,2)],[paramsValues2D1(1,1)-(paramsValues2D1(2,1)*errMult), paramsValues2D1(1,1)+(paramsValues2D1(2,1)*errMult)],'LineWidth',2);
 	line([paramsValues2D0(1,2)-(paramsValues2D0(2,2)*errMult), paramsValues2D0(1,2)+(paramsValues2D0(2,2)*errMult)], [paramsValues2D0(1,1), paramsValues2D0(1,1)],'LineWidth',2);
@@ -275,12 +271,12 @@ end
 drawnow
 warning on
 
-if doModelComparison
-	
+if st.doModelComparison
+
 	paramsValues2D0(1,2) = log10(paramsValues2D0(1,2));
 	paramsValues2D1(1,2) = log10(paramsValues2D1(1,2));
 
-	StimLevels = [StimLevels;StimLevels];
+	StimLevels = [st.StimLevels;st.StimLevels];
 	NumPos = [NumPos0;NumPos1];
 	OutOfNum = [OutOfNum0;OutOfNum1];
 	paramsValues = [paramsValues0;paramsValues1];
@@ -290,59 +286,59 @@ if doModelComparison
 	rangeTries = [1 1 0 0];
 	B = 500;
 
-	figure('Position',[5 5 1000 500],'NumberTitle','off','Name','Contrast Pedestal Fitting')
+	fh = figure('Position',[5 5 1000 500],'NumberTitle','off','Name','Contrast Pedestal Fitting')
 	h = waitbar(0,'Fitting General Model, please wait...');
-	
+
 	%default comparison (thresholds AND slopes equal, while guess rates and lapse rates fixed
 	disp('===> Fitting General Model...')
-	
+
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF,'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
+
 	
-	subplot(1,3,1);histogram(real(TLRSim),40);hold on
+	figure(fh); subplot(1,3,1);histogram(real(TLRSim),40);hold on
 	title('Model Comparison')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
 	message = ['p_{all}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
-	
-	
+
 	waitbar(0.3,h,'Fitting Threshold Model, please wait...');
 	disp('===> Fitting Threshold Model...')
-	
+
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserSlopes','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
-	
-	subplot(1,3,2);histogram(real(TLRSim),40);hold on
+
+	figure(fh); subplot(1,3,2);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Threshold')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
 	message = ['p_{thresh}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
-	
-	
+
+
 	waitbar(0.7,h,'Fitting Slope Model, please wait...');
 	disp('===> Fitting Slope Model...')
-	
+
 	[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 		PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, ...
 		paramsValues, B, PF, 'lesserThresholds','unconstrained', 'maxTries',maxTries,'rangeTries',rangeTries,...
 		'searchOptions',opts,'lapseLimits',lapseLimits,'guessLimits',guessLimits);
-	
-	subplot(1,3,3);histogram(real(TLRSim),40);hold on
+
+	figure(fh); subplot(1,3,3);histogram(real(TLRSim),40);hold on
 	title('Model Comparison for Slope')
 	yl = get(gca, 'Ylim');xl = get(gca, 'Xlim');
 	plot(TLR,.05*yl(2),'kv','MarkerSize',12,'MarkerFaceColor','k')
 	text(TLR,.15*yl(2),'TLR data','Fontsize',11,'horizontalalignment','center');
 	message = ['p_{slope}: ' num2str(pTLR,'%5.5g')];
 	text(.95*xl(2),.8*yl(2),message,'horizontalalignment','right','fontsize',10);
-	
+
 	waitbar(1,h,'Finished!');
 	pause(0.75);
 	close(h);
@@ -397,45 +393,45 @@ end
 	end
 
 	%===========================================================================
-	function doPlotCurve()
-		
-		NumPos0=fliplr(rB(i,:)*nTrials);
-		OutOfNum0=repmat(nTrials,1,length(rB));
-		NumPos1=rW(i,:)*8;
-		OutOfNum1=repmat(nTrials,1,length(rB));
+	function [model0,model1] = doPlotCurve()
 
-		[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
-		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
+		NumPos0=fliplr(rB(i,:)*st.nTrials);
+		OutOfNum0=repmat(st.nTrials,1,length(rB));
+		NumPos1=rW(i,:)*st.nTrials;
+		OutOfNum1=repmat(st.nTrials,1,length(rB));
+
+		[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(st.StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
+		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(st.StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 
 		%Create simple plot
 		PC0=NumPos0./OutOfNum0;
 		PC1=NumPos1./OutOfNum1;
-		PC0Model = PF(paramsValues0,StimLevelsFineGrain);
-		PC1Model = PF(paramsValues1,StimLevelsFineGrain);
+		model0 = PF(paramsValues0,st.StimLevelsFineGrain);
+		model1 = PF(paramsValues1,st.StimLevelsFineGrain);
 
 		hold on
-		scatter(StimLevels,PC0,60,'MarkerFaceColor',[0.7 0 0],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
-		scatter(StimLevels,PC1,60,'MarkerFaceColor',[0 0 0.7],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
-		plot(StimLevelsFineGrain,real(PC0Model),'-','color',[0.7 0 0],'linewidth',2);
-		plot(StimLevelsFineGrain,real(PC1Model),'-','color',[0 0 0.7],'linewidth',2);
+		scatter(st.StimLevels,PC0,60,'MarkerFaceColor',[0.7 0 0],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
+		scatter(st.StimLevels,PC1,60,'MarkerFaceColor',[0 0 0.7],'MarkerEdgeColor','none','Marker','o','MarkerFaceAlpha',0.7);
+		plot(st.StimLevelsFineGrain,real(model0),'-','color',[0.7 0 0],'linewidth',2);
+		plot(st.StimLevelsFineGrain,real(model1),'-','color',[0 0 0.7],'linewidth',2);
 		box on;grid on; grid minor;
 		line([0,0.35],[0.5 0.5],'LineStyle','-.','Color',[0.5 0.5 0.5]);
 		xlabel('Pedestal contrast');ylabel('Pedestal seen ratio');
-		t=sprintf('Subject: %s\n T=%.2g / %.2g S=%.2g / %.2g \nE=%.2g / %.2g L=%.2g / %.2g',[md.subject '-' md.lab '-' md.comments],...
+		t=sprintf('%s\n T=%.2g / %.2g S=%.2g / %.2g \nE=%.2g / %.2g L=%.2g / %.2g',[md.subject '-' md.lab '-' md.comments],...
 			paramsValues0(1),paramsValues1(1),paramsValues0(2),paramsValues1(2),paramsValues0(3),paramsValues1(3),paramsValues0(4),paramsValues1(4));
 		title(t);
 		xlim([-0.01 inf]);ylim([-0.01 1.01]);set(gca,'YTick',[0:0.25:1]);set(gca,'XTick',[0:0.1:0.4]);
-	
-		
-		if doModelComparisonSingle
+
+
+		if st.doModelComparisonSingle
 			ht=text(0,0.9,'Please Wait, comparing models...','horizontalalignment','left','fontsize',14,'fontweight','bold');
 			drawnow;
-			
-			SL = [StimLevels;StimLevels];
+
+			SL = [st.StimLevels;st.StimLevels];
 			NP = [NumPos0;NumPos1];
 			OON = [OutOfNum0;OutOfNum1];
 			PV = [paramsValues0;paramsValues1];
-			
+
 			[TLR, pTLR, paramsL, paramsF, TLRSim, converged] = ...
 				PAL_PFLR_ModelComparison(SL, NP, OON, PV, ...
 				500, PF,'maxTries', 4,'rangeTries', [1 1 0 0],...
@@ -443,7 +439,7 @@ end
 			message = ['Model Comparison P = ' num2str(pTLR,'%5.5g')];
 			ht.String = message;
 		end
-	
+
 	end
 
 	%===========================================================================
