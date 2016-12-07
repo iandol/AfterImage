@@ -141,10 +141,15 @@ g.run;
 for i=1:length(mm)
 	kB=find(model0(i,:)>0.5);
 	kW=find(model1(i,:)>0.5);
-	Whight=0.5-model1(i,1:kW(1)-1);
 	Bhight=0.5-model0(i,1:kB(1)-1);
-	IntW(i)=sum(Whight*0.4/50);
+	Whight=0.5-model1(i,1:kW(1)-1);
 	IntB(i)=sum(Bhight*0.4/50);
+	IntW(i)=sum(Whight*0.4/50);
+	
+	idxB=find(model0(i,:)<=0.5);
+	idxW=find(model1(i,:)<=0.5);
+	intB(i)=trapz(st.StimLevelsFineGrain(idxB)',0.5-model0(i,idxB)');
+	intW(i)=trapz(st.StimLevelsFineGrain(idxW),0.5-model1(i,idxW));
 end
 
 g = getDensity('x',IntB,'y',IntW,...

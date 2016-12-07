@@ -54,7 +54,7 @@ else
 	st.grain								= 300;
 	st.StimLevelsFineGrain	= linspace(min(st.StimLevels),max(st.StimLevels),st.grain);
 	st.nTrials							= 8;
-	st.doModelComparison		= true;
+	st.doModelComparison		= false;
 	st.doModelComparisonSingle = false;
 	st.noSEEWeight					= 0.5;
 	st.totalT								= 64;
