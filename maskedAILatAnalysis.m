@@ -11,6 +11,7 @@ YESSEE	= 2;
 
 %=======================Our data list=========================================
 n = 1;
+mm{n}='AISTAIRLatency_LuYL_2016_12_7_15_47_52.mat'; n=n+1;
 mm{n}='AISTAIRLatency_GongHL_2016_10_21_21_36_54.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_ChenJH_2016_10_21_21_14_55.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_HeKY_2016_10_17_13_15_48.mat'; n=n+1;
@@ -31,10 +32,16 @@ mm{n}='AISTAIRLatency_ChenZY_2016_10_15_17_15_59'; n=n+1;
 % mm{n}='AISTAIRLatency_Hui_2016_10_14_18_3_53.mat'; n=n+1; 
 % mm{n}='AISTAIRLatency_Hui_2016_10_13_22_1_8.mat'; n=n+1; 
 
-if length(mm) < 5
+if length(mm) < 2
+	xp=1; yp = 1;
+elseif length(mm) < 3
+	xp=1; yp = 2;
+elseif length(mm) < 5
 	xp=2; yp = 2;
 elseif length(mm) < 7
 	xp=2; yp = 3;
+elseif length(mm) < 9
+	xp=2; yp = 4;
 elseif length(mm) < 10
 	xp=3; yp = 3;
 elseif length(mm) < 13

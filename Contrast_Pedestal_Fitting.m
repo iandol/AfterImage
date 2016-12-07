@@ -44,6 +44,8 @@ elseif length(mm) < 5
 	xp=2; yp = 2;
 elseif length(mm) < 7
 	xp=2; yp = 3;
+elseif length(mm) < 9
+	xp=2; yp = 4;
 elseif length(mm) < 10
 	xp=3; yp = 3;
 elseif length(mm) < 13
@@ -148,14 +150,17 @@ for i=1:length(mm)
 	
 	idxB=find(model0(i,:)<=0.5);
 	idxW=find(model1(i,:)<=0.5);
-	intB(i)=trapz(st.StimLevelsFineGrain(idxB)',0.5-model0(i,idxB)');
-	intW(i)=trapz(st.StimLevelsFineGrain(idxW),0.5-model1(i,idxW));
+	intB(i)=trapz(st.StimLevelsFineGrain(idxB),abs(0.5-model0(i,idxB)));
+	intW(i)=trapz(st.StimLevelsFineGrain(idxW),abs(0.5-model1(i,idxW)));
 end
 
 g = getDensity('x',IntB,'y',IntW,...
 	'legendtxt',{'DARK','BRIGHT'},'columnlabels',{'Contrast Integral'});
 g.run;
-
+% g.x = intB;
+% g.y = intW;
+% g.columnlabels = {'TRAPZ Contrast Integral'};
+% g.run;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

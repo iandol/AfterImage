@@ -255,6 +255,7 @@ try %our main experimentqal try catch loop
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
 			edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]); ... %obj.getTaskIndex gives us which trial we're at
 			edfMessage(eL,['PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+			edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
 			startRecording(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
