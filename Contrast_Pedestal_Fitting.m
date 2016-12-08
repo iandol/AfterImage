@@ -19,22 +19,34 @@ if ~exist('st','var')  || isempty(st)
 	st.StimLevels					= st.pedestalRange;
 	st.StimLevelsFineGrain = linspace(min(st.StimLevels),max(st.StimLevels),200);
 	st.nTrials = 8;
+	st.noSEEWeight = 0.5;
+	st.doModelComparison		= false;
+	st.doModelComparisonSingle = false;
+	st.totalT				= 64;
+	st.useFixed		= true;
+	st.maxGamma = 0.5;
+	st.PF				= @PAL_Weibull;
 end
 
-PF									= @PAL_Weibull;
-paramsFree					= [1 1 1 1];
+PF							= st.PF	;
+paramsFree				= [1 1 1 0];
 searchGrid.alpha		= st.StimLevelsFineGrain;
-searchGrid.beta			= linspace(0.5, 5, 100);
-searchGrid.gamma		= linspace(0.01,0.6,30);
-searchGrid.lambda		= 0.001;
-searchGrid1					= searchGrid;
-opts								= PAL_minimize('options');
-opts.TolX						= 1e-09;           %precision). This is a good idea,
-opts.TolFun					= 1e-09;           %especially in high-dimension
-opts.MaxIter				= 10000;           %parameter space.
+searchGrid.beta		= linspace(0.5, 5, 100);
+searchGrid.gamma		= linspace(0.01,st.maxGamma,30);
+if st.useFixed
+	searchGrid.lambda	= 0.001;
+else
+	searchGrid.lambda	= linspace(0.001,0.1,5);
+end
+paramsFree1				= paramsFree; 
+searchGrid1				= searchGrid;
+opts						= PAL_minimize('options');
+opts.TolX				= 1e-09;           %precision). This is a good idea,
+opts.TolFun				= 1e-09;           %especially in high-dimension
+opts.MaxIter			= 10000;           %parameter space.
 opts.MaxFunEvals		= 10000;
-lapseLimits					= [0.0001 0.1];
-guessLimits					= [0.01 0.6];
+guessLimits				= [0.01 st.maxGamma]; %this is gamma
+lapseLimits				= [0.0001 0.1]; %this is lambda
 
 if length(mm) < 2
 	xp=1; yp = 1;
@@ -120,7 +132,7 @@ for i=1:length(mm)
 	end
 	figure(figH2);
 	[ii, jj] = ind2sub([xp yp],i); qn(ii,jj).select();
-	[model0(i,:), model1(i,:)] = doPlotCurve();
+	[model0(i,:), model1(i,:)] = doPlotSingleCurve();
 end
 
 if length(mm) == 1; return; end %no need to do population analysis...
@@ -141,17 +153,17 @@ g.run;
 
 %%%%%%%%%%%%%%%%%%%%%%statistics on integrals%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i=1:length(mm)
-	kB=find(model0(i,:)>0.5);
-	kW=find(model1(i,:)>0.5);
+	kB=find(model0(i,:)>=0.5);
+	kW=find(model1(i,:)>=0.5);
 	Bhight=0.5-model0(i,1:kB(1)-1);
 	Whight=0.5-model1(i,1:kW(1)-1);
 	IntB(i)=sum(Bhight*0.4/50);
 	IntW(i)=sum(Whight*0.4/50);
 	
-	idxB=find(model0(i,:)<=0.5);
-	idxW=find(model1(i,:)<=0.5);
-	intB(i)=trapz(st.StimLevelsFineGrain(idxB),abs(0.5-model0(i,idxB)));
-	intW(i)=trapz(st.StimLevelsFineGrain(idxW),abs(0.5-model1(i,idxW)));
+% 	idxB=find(model0(i,:)<=0.5);
+% 	idxW=find(model1(i,:)<=0.5);
+% 	intB(i)=trapz(st.StimLevelsFineGrain(idxB),abs(0.5-model0(i,idxB)));
+% 	intW(i)=trapz(st.StimLevelsFineGrain(idxW),abs(0.5-model1(i,idxW)));
 end
 
 g = getDensity('x',IntB,'y',IntW,...
@@ -403,7 +415,7 @@ end
 	end
 
 	%===========================================================================
-	function [model0,model1] = doPlotCurve()
+	function [model0,model1] = doPlotSingleCurve()
 
 		NumPos0=fliplr(rB(i,:)*st.nTrials);
 		OutOfNum0=repmat(st.nTrials,1,length(rB));
@@ -411,7 +423,7 @@ end
 		OutOfNum1=repmat(st.nTrials,1,length(rB));
 
 		[paramsValues0, LL0, exitflag0, message] = PAL_PFML_Fit(st.StimLevels,NumPos0,OutOfNum0,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
-		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(st.StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
+		[paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(st.StimLevels,NumPos1,OutOfNum1,searchGrid1,paramsFree1,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
 
 		%Create simple plot
 		PC0=NumPos0./OutOfNum0;

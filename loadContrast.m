@@ -29,6 +29,7 @@ if strcmpi(dataset,'revision1')
 	st.noSEEWeight					= 0.5;
 	st.totalT								= 64;
 	st.useFixed							= true;
+	
 else
 	%-------------Ye Liu different runs
 	
@@ -41,7 +42,7 @@ else
 
 	%-------------All subjects
 	mm{n}='AIMOC_LuYL_2016_12_7_14_25_19.mat';	n=n+1;
-	mm{n}='AIMOC_LiMW_2016_12_7_10_50_47.mat';	n=n+1;
+	mm{n}='AIMOC_LiMW_2016_12_8_14_10_56.mat';	n=n+1;
 	mm{n}='AIMOC_GongHL_2016_12_2_15_32_39.mat';	n=n+1;
 	mm{n}='AIMOC_LiuYe_2016_12_6_12_40_25.mat';		n=n+1;
 	mm{n}='AIMOC_LiuXu_2016_12_2_13_11_9.mat';		n=n+1;
@@ -50,17 +51,19 @@ else
 	mm{n}='AIMOC_ChenZY_2016_12_2_14_55_3.mat';		n=n+1;
 	
 	st.pedestalRange				= 0:0.05:0.4;
-	st.pedestalBlackLinear	= 0.5 - fliplr(st.pedestalRange);
-	st.pedestalWhiteLinear	= 0.5 + st.pedestalRange;
-	st.StimLevels						= st.pedestalRange;
-	st.grain								= 300;
-	st.StimLevelsFineGrain	= linspace(min(st.StimLevels),max(st.StimLevels),st.grain);
-	st.nTrials							= 8;
-	st.doModelComparison		= true;
+	st.pedestalBlackLinear		= 0.5 - fliplr(st.pedestalRange);
+	st.pedestalWhiteLinear		= 0.5 + st.pedestalRange;
+	st.StimLevels					= st.pedestalRange;
+	st.grain							= 300;
+	st.StimLevelsFineGrain		= linspace(min(st.StimLevels),max(st.StimLevels),st.grain);
+	st.nTrials						= 8;
+	st.doModelComparison			= true;
 	st.doModelComparisonSingle = false;
 	st.noSEEWeight					= 0.5;
-	st.totalT								= 72;
-	st.useFixed							= true;
+	st.totalT						= 72;
+	st.useFixed						= true;
+	st.maxGamma						= 0.5;
+	st.PF								= @PAL_Weibull;
 end
 
 Contrast_Pedestal_Fitting(mm,st);
