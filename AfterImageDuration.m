@@ -62,6 +62,8 @@ function AIDCalibFile_Callback(hObject, eventdata, handles)
 
 function CloseButton_Callback(hObject, eventdata, handles)
 global sM scr el
+ListenChar(0);
+Priority(0);
 close(sM)
 Eyelink('StopRecording');
 Screen('CloseAll');
@@ -98,7 +100,7 @@ scr.screenRect = sM.winRect;
 scr.ifi = sM.screenVals.ifi;
 scr.ppd = sM.ppd;
 
-fixWinSize = 1.5*scr.ppd; % deg change to pixel ;30; %pixel
+fixWinSize = 2*scr.ppd; % deg change to pixel ;30; %pixel
 
 rectColor = 0;
 sM.drawCross;sM.flip;
@@ -226,6 +228,7 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     
     WaitSecs(2*rand(1));
     ResponseMatrix(i,7)=1; %if no out win,value is 1
+	 save('TempAfterImageDuration.mat','ResponseMatrix');
     
     X = [];
     Y = [];
@@ -241,11 +244,13 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     vbl = Screen('Flip', scr.w, scr.ifi);
     %      vbl = Screen('Flip',scr.w);
     vblendtime = GetSecs + StiSpotDuration(index_StiSpotDuration(i));
+	 fprintf('===>>> Stimulus shown for %.2g seconds\n',StiSpotDuration(index_StiSpotDuration(i)))
     while(GetSecs < vblendtime)
         %%
         error=Eyelink('CheckRecording');
         if(error~=0)
-            break;
+			  fprintf('ERROR NON-ZERO\n');
+           break;
         end
         
         % check for presence of a new sample update
@@ -307,7 +312,7 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     if rem(cut_num,2) ~= 0
         cut_num = cut_num+1;
     end
-    xpos = mean(X(1+cut_num/2:end-cut_num/2))
+    xpos = mean(X(1+cut_num/2:end-cut_num/2));
     Y(Y==0) = [];
     Y = sort(Y);
     num = length(Y);
@@ -315,7 +320,7 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     if rem(cut_num,2) ~= 0
         cut_num = cut_num+1;
     end
-    ypos = mean(Y(1+cut_num/2:end-cut_num/2))
+    ypos = mean(Y(1+cut_num/2:end-cut_num/2));
     
     fixationWindow = [0 0 fixWinSize fixWinSize];
     fixationWindow = CenterRectOnPoint(fixationWindow, xpos, ypos);
@@ -371,6 +376,7 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     sM.drawCross(FixPointSize, FixPointColor, FixPointXPosition, FixPointYPosition);
     sM.flip;
     %     WaitSecs(0.5);
+	 ListenChar(2);
     while 1
         [s, keyCode, deltaSecs] = KbWait;
         if keyCode(leftButton) == 1
@@ -389,8 +395,11 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
             sM.drawCross;sM.flip;
             return
 			elseif keyCode(cButton) == 1
+				Eyelink('StopRecording');
             EyelinkDoTrackerSetup(el);
-            return
+				Eyelink('StartRecording');
+				WaitSecs(1);
+            break
         end
     end
     ResponseMatrix(i,5)=s-s1;
@@ -399,6 +408,7 @@ for i=1:length(StiSpotDiameter)*length(StiSpotDuration)*length(StiSpotIntensity)
     sM.flip;
     WaitSecs(0.2);
     disp(i)
+	 ListenChar(1);
 end
 
 %% do trials with out window
