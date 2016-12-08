@@ -14,7 +14,7 @@ stimTime = 4;
 pedestalTime = 0.4;
 maskTime = 1.5;
 nBlocks = 144; %number of repeated blocks?
-sigma = 15;
+sigma = 10;
 discSize = 3;
 pedestalRange = [0:0.05:0.4];
 
@@ -358,7 +358,7 @@ try %our main experimentqal try catch loop
 			end
 			
 			drawBackground(s);
-			Screen('DrawText',s.win,['Did you see anything AFTER stimulus: [LEFT]=NO [UP]=BRIGHTER [DOWN]=DARKER [RIGHT]=SHOW AGAIN'],0,0);
+			Screen('DrawText',s.win,['See anything AFTER stimulus: [LEFT]=NO [UP]=BRIGHTER [DOWN]=DARKER [RIGHT]=SHOW AGAIN'],0,0);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')

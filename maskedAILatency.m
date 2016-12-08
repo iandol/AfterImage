@@ -28,10 +28,10 @@ if strcmpi(lab,'lab214_aristotle')
 		calibrationFile = [];
 	end
 	backgroundColour = [0.5 0.5 0.5];
-	useEyeLink = false;
-	isDummy = true;
+	useEyeLink = true;
+	isDummy = false;
 	pixelsPerCm = 36; %34 G520@1280x1024, 26@1024x768 for G520, 40=Dell LCF and iMac (retina native), 32=Lab CRT, 44=27"monitor or Macbook Pro
-	distance = 57.7; %64.5 in Dorris lab;
+	distance = 56.5; %64.5 in Dorris lab;
 	windowed = [];
 	useScreen = []; %screen 2 in lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
