@@ -17,11 +17,13 @@ if strcmpi(analyze,'contrast')
 	e.correctValue = [1 2 3]; %NOSEE YESBRIGHT YESDARK
 	e.incorrectValue = [0 4]; %UNSURE
 	e.breakFixValue = -1;
-	e.measureRange = [-0.2 5];
-	e.plotRange = [0 4];
+	e.measureRange = [-0.5 5];
+	e.plotRange = [-0.5 4];
 	e.excludeIncorrect = false;
-	e.simpleParse
-	e.plot(e.correct.idx(1:10))
+	e.simpleParse;
+	e.pruneNonRTTrials;
+	e.parseSaccades;
+	e.plot(e.correct.idx(1:10));
 else
 	
 end
