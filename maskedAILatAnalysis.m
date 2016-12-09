@@ -6,31 +6,32 @@ function maskedAILatAnalysis()
 PF			= @PAL_Weibull;
 avgF		= @nanmedian;
 errF		= 'SE';
-NOSEE		= 1; 
+NOSEE		= 1;
 YESSEE	= 2;
 
 %=======================Our data list=========================================
 n = 1;
+%mm{n}='AISTAIRLatency_LiMW_2016_12_9_16_1_59.mat'; n=n+1;
 mm{n}='AISTAIRLatency_LuYL_2016_12_7_15_47_52.mat'; n=n+1;
 mm{n}='AISTAIRLatency_GongHL_2016_10_21_21_36_54.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_ChenJH_2016_10_21_21_14_55.mat'; n=n+1;
 %mm{n}='AISTAIRLatency_HeKY_2016_10_17_13_15_48.mat'; n=n+1;
 mm{n}='AISTAIRLatency_LiuYe_2016_10_17_12_47_52.mat'; n=n+1;
-mm{n}='AISTAIRLatency_LiuX_2016_10_15_15_30_51.mat';  n=n+1; 
+mm{n}='AISTAIRLatency_LiuX_2016_10_15_15_30_51.mat';  n=n+1;
 mm{n}='AISTAIRLatency_Ian_2016_10_15_15_9_16.mat';  n=n+1;
 mm{n}='AISTAIRLatency_Hui_2016_10_15_14_47_40.mat';  n=n+1;
-mm{n}='AISTAIRLatency_ChenZY_2016_10_15_17_15_59'; n=n+1; 
-%mm{n}='AISTAIRLatency_ChenZY_2016_10_14_22_0_21.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_ChenZY_2016_10_14_21_48_6.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_LiuYe_2016_10_14_21_35_34.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_LiuYe_2016_10_14_21_26_14.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_HeKY_2016_10_14_21_0_48.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_HeKY_2016_10_14_20_15_47.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_Ian_2016_10_14_19_18_21.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_Hui_2016_10_14_18_54_45.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_Ian_2016_10_14_18_15_17.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_Hui_2016_10_14_18_3_53.mat'; n=n+1; 
-% mm{n}='AISTAIRLatency_Hui_2016_10_13_22_1_8.mat'; n=n+1; 
+mm{n}='AISTAIRLatency_ChenZY_2016_10_15_17_15_59'; n=n+1;
+%mm{n}='AISTAIRLatency_ChenZY_2016_10_14_22_0_21.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_ChenZY_2016_10_14_21_48_6.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_LiuYe_2016_10_14_21_35_34.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_LiuYe_2016_10_14_21_26_14.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_HeKY_2016_10_14_21_0_48.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_HeKY_2016_10_14_20_15_47.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_Ian_2016_10_14_19_18_21.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_Hui_2016_10_14_18_54_45.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_Ian_2016_10_14_18_15_17.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_Hui_2016_10_14_18_3_53.mat'; n=n+1;
+% mm{n}='AISTAIRLatency_Hui_2016_10_13_22_1_8.mat'; n=n+1;
 
 if length(mm) < 2
 	xp=1; yp = 1;
@@ -64,7 +65,7 @@ warning off
 
 for i=1:length(mm)
 	clear task taskB taskW md s stimuli eL;
-	load(mm{i},'task','taskB','taskW','md','s'); 
+	load(mm{i},'task','taskB','taskW','md','s');
 	if ~isfield(md,'useGratingMask');md.useGratingMask=1;end
 	tit = [md.subject '-' md.lab '-' md.comments '-T=' num2str(md.stimTime) '-GM=' num2str(md.useGratingMask)];
 	fprintf('Loaded: %s = %s\n', mm{i}, tit);
@@ -164,7 +165,7 @@ else
 	e(1)=mB-mBe(1);e(2)=mBe(2)-mB; mBe=e;
 end
 if length(mWe)==1
-	e(1)=mWe; e(2)=mWe; mWe=e; 
+	e(1)=mWe; e(2)=mWe; mWe=e;
 else
 	e(1)=mW-mWe(1);e(2)=mWe(2)-mW; mWe=e;
 end
@@ -267,15 +268,15 @@ warning on
 		end
 		x = 1:length(task.response.response);
 		delay = task.response.maskDelay;
-		
+
 		idxW = task.response.contrastOut == 1;
 		idxB = task.response.contrastOut == 0;
-		
+
 		idxNOSEE = task.response.response == md.NOSEE;
 		idxYESSEE = task.response.response == md.YESSEE;
-		
+
 		cla;
-		
+
 		hold on
 		if md.staircase
 			modx=2:2:length(x);
