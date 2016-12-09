@@ -192,9 +192,10 @@ randomiseStimuli(taskB);
 initialiseTask(taskB);
 
 %=====================================================================
-try %our main experimentqal try catch loop
-	
-	if useEyeLink == true; getSample(eL); end %load everything into memory
+try %our main experimental try catch loop
+%=====================================================================
+
+	if useEyeLink == true; getSample(eL); end %ensure our eyelink code is in memory
 	
 	loop = 1;
 	posloop = 1;
@@ -254,11 +255,12 @@ try %our main experimentqal try catch loop
 			trackerDrawStimuli(eL,ts);
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
 			edfMessage(eL,['TRIALID ' num2str(task.totalRuns)]); ... %obj.getTaskIndex gives us which trial we're at
-			edfMessage(eL,['PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+			edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
 			edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
 			startRecording(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
+			ListenChar(2);
 			syncTime(eL);
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				drawSpot(s,0.1,[1 1 0],fixX,fixY);
@@ -289,6 +291,7 @@ try %our main experimentqal try catch loop
 					end
 				end
 			end
+			ListenChar(0);
 			if strcmpi(fixated,'breakfix'); response = BREAKFIX; end
 		else
 			drawSpot(s,0.1,[1 1 0],fixX,fixY);
