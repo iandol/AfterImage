@@ -183,7 +183,7 @@ errorbar(paxes,1:length(mm),Bthreshold,BthresholdErr,'r.','Color',[0.7 0 0],'Lin
 errorbar(paxes,1:length(mm),Wthreshold,WthresholdErr,'b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',40);
 title(paxes,sprintf('Subject Thresholds p=%.2g pvar=%.2g',pval,pvalvar)); xlabel(paxes,'Subject Number');ylabel(paxes,'\Deltat Mask Time \pm1SE (s)');box on; grid on;
 xlim([0 length(mm)+1]);ylim([0 0.6]);
-paxes.XTick = [1 2 3 4 5 6];
+paxes.XTick = 1:length(mm);
 
 %===================================================================================
 %===============================PLOT PF and ABOVEErrors=============================
@@ -213,7 +213,7 @@ ylabel('Subject Number')
 box on; grid on; grid minor
 ylim([0 length(mm)+1]); xlim([0 0.8]);
 paxes2.XTickLabel = {''};
-paxes2.YTick = [1 2 3 4 5 6];
+paxes2.YTick = 1:length(mm);
 paxes2.YMinorGrid = 'off';
 %paxes2.YAxisLocation = 'right';
 title(sprintf('Latency Paradigm Psychometric Functions p=%.2g pvar=%.2g',pval,pvalvar));
@@ -231,7 +231,7 @@ errorbar(1:length(mm),Bthreshold,BthresholdErr,'r.','Color',[0.7 0 0],'LineWidth
 errorbar(1:length(mm),Wthreshold,WthresholdErr,'b.','Color',[0 0 0.7],'LineWidth',2,'MarkerSize',60,'CapSize',20);
 title('Subject Thresholds'); xlabel('Subject Number');ylabel('\Deltat Mask Time \pm1SE (s)');
 paxes1.XLim = [0 length(mm)+1]; paxes1.YLim = [0 0.6];
-paxes1.XTick = [1 2 3 4 5 6]; paxes1.Box = 'on'; grid on; grid minor;
+paxes1.XTick = 1:length(mm); paxes1.Box = 'on'; grid on; grid minor;
 axes(paxes2); grid on; grid minor;
 for i = 1:length(Bthreshold)
 	plot(modelB(i,:),StimLevels,'r-.','LineWidth',0.75);

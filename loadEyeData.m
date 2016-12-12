@@ -8,7 +8,8 @@ load(fn);
 fn = regexprep(fn,'\.mat$','.edf');
 e = eyelinkAnalysis('file',fn,'dir',pn);
 
-if strcmpi(analyze,'contrast')
+switch analyze
+	case 'contrast'
 	e.variableMessageName = 'PEDESTAL';
 	e.pixelsPerCm					= s.pixelsPerCm;
 	e.distance						= s.distance;
@@ -22,9 +23,18 @@ if strcmpi(analyze,'contrast')
 	e.excludeIncorrect		= false;
 	e.simpleParse;
 	e.pruneNonRTTrials;
-	%e.parseSaccades;
-	e.plot(e.correct.idx(1:10));
-else
+	e.parseSaccades;
+	
+	responses = task.response.response;
+	contrasts = task.response.contrastOut;
+	pedestals = task.response.pedestal;
+	pedEye = [e.trials(e.correct.idx).variable];
+	responsesEye = [e.trials(e.correct.idx).variable];
+	
+	blackIdx = e.correct.idx(contrasts==0);
+	whiteIdx = e.correct.idx(contrasts==1);
+	
+	case 'latency'
 	e.variableMessageName		= 'TRIALID';
 	e.pixelsPerCm						= s.pixelsPerCm;
 	e.distance							= s.distance;
