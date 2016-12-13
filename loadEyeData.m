@@ -5,8 +5,8 @@ clear e
 [fn,pn]=uigetfile('*.mat','Load MAT File');
 cd(pn);
 load(fn);
-fn = regexprep(fn,'\.mat$','.edf');
-e = eyelinkAnalysis('file',fn,'dir',pn);
+fn2 = regexprep(fn,'\.mat$','.edf');
+e = eyelinkAnalysis('file',fn2,'dir',pn);
 
 switch analyze
 	case 'contrast'
