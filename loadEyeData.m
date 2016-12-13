@@ -1,7 +1,7 @@
 
 analyze = 'contrast';
 
-clear e
+clear e task msaccB msaccW AllsaccB AllsaccW g
 [fn,pn]=uigetfile('*.mat','Load MAT File');
 cd(pn);
 load(fn);
@@ -62,17 +62,22 @@ switch analyze
 		responsesEye = [e.trials(cidx).result];
 		pedEye = [e.trials(cidx).variable];
 		
+		if length(responses) ~= length(responsesEye)
+			error('Length of MAT and EDF responses not the same !!!')
+		elseif ~all(responses==responsesEye)
+			error('Content of MAT and EDF responses not the same !!!')
+		end
+		
 		if length(contrasts) == length(cidx)
 			blackIdx = cidx(contrasts==0);
 			whiteIdx = cidx(contrasts==1);
 		end
 		
-		a = 1; b = 1; msaccB = []; msaccW = [];
+		a = 1; b = 1; msaccB = []; 
 		for i = blackIdx
 			msaccB(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
-			a = a + 1;
 			for j = 1:length(e.trials(i).msacc)
-				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+				if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
 					AllsaccB(b).trial = a;
 					AllsaccB(b).time = e.trials(i).msacc(j).time;
 					AllsaccB(b).velocity = e.trials(i).msacc(j).velocity;
@@ -80,13 +85,14 @@ switch analyze
 					b = b + 1;
 				end
 			end
+			a = a + 1;
 		end
-		a = 1;
+		
+		a = 1; b = 1; msaccW = [];
 		for i = whiteIdx
 			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
-			a = a + 1;
 			for j = 1:length(e.trials(i).msacc)
-				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+				if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
 					AllsaccW(b).trial = a;
 					AllsaccW(b).time = e.trials(i).msacc(j).time;
 					AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
@@ -94,6 +100,7 @@ switch analyze
 					b = b + 1;
 				end
 			end
+			a = a + 1;
 		end
 		
 		g = getDensity('x', msaccB, 'y', msaccW, 'legendtxt', {'Black','White'}, 'columnlabels',{'Microsaccades'});
