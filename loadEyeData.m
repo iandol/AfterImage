@@ -63,9 +63,10 @@ switch analyze
 		pedEye = [e.trials(cidx).variable];
 		
 		if length(responses) ~= length(responsesEye)
-			error('Length of MAT and EDF responses not the same !!!')
+			warning('Length of MAT and EDF responses not the same !!!')
 		elseif ~all(responses==responsesEye)
-			error('Content of MAT and EDF responses not the same !!!')
+			warning('Content of MAT and EDF responses not the same !!!')
+			responses - responsesEye
 		end
 		
 		if length(contrasts) == length(cidx)
