@@ -1,7 +1,7 @@
 
-clear e
 analyze = 'contrast';
 
+clear e
 [fn,pn]=uigetfile('*.mat','Load MAT File');
 cd(pn);
 load(fn);
@@ -18,16 +18,21 @@ switch analyze
 		e.correctValue				= [1 2 3]; %NOSEE YESBRIGHT YESDARK
 		e.incorrectValue			= [0 4]; %UNSURE
 		e.breakFixValue				= -1;
-		e.measureRange				= [-0.5 5];
+		e.measureRange				= [-0.5 4];
 		e.plotRange						= [-0.5 4];
+		e.VFAC								= 6;
+		e.MINDUR							= 3;
 		e.excludeIncorrect		= false;
 		e.simpleParse;
 		e.pruneNonRTTrials;
-		%e.parseSaccades;
+		e.parseSaccades;
 		
+		% DATA FROM MAT FILE
 		responses = task.response.response;
 		contrasts = task.response.contrastOut;
 		pedestals = task.response.pedestal;
+	
+		%DATA FROM EYELINK
 		responsesEye = [e.trials(e.correct.idx).result];
 		pedEye = [e.trials(e.correct.idx).variable];
 		
@@ -53,6 +58,7 @@ switch analyze
 			end
 		end
 		
+		%NEED to CHECK responses and responsesEye are the same
 		responsesEye = [e.trials(cidx).result];
 		pedEye = [e.trials(cidx).variable];
 		
@@ -60,6 +66,41 @@ switch analyze
 			blackIdx = cidx(contrasts==0);
 			whiteIdx = cidx(contrasts==1);
 		end
+		
+		a = 1; b = 1; msaccB = []; msaccW = [];
+		for i = blackIdx
+			msaccB(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
+			a = a + 1;
+			for j = 1:length(e.trials(i).msacc)
+				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+					AllsaccB(b).trial = a;
+					AllsaccB(b).time = e.trials(i).msacc(j).time;
+					AllsaccB(b).velocity = e.trials(i).msacc(j).velocity;
+					AllsaccB(b).rho = e.trials(i).msacc(j).rho;
+					b = b + 1;
+				end
+			end
+		end
+		a = 1;
+		for i = whiteIdx
+			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
+			a = a + 1;
+			for j = 1:length(e.trials(i).msacc)
+				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+					AllsaccW(b).trial = a;
+					AllsaccW(b).time = e.trials(i).msacc(j).time;
+					AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
+					AllsaccW(b).rho = e.trials(i).msacc(j).rho;
+					b = b + 1;
+				end
+			end
+		end
+		
+		g = getDensity('x', msaccB, 'y', msaccW, 'legendtxt', {'Black','White'}, 'columnlabels',{'Microsaccades'});
+		g.run
+		
+		fn = regexprep(fn,'\.mat$','_MSACC.mat');
+		save(fn, 'msaccB','msaccW','AllsaccB','AllsaccW');
 		
 	case 'latency'
 		e.variableMessageName		= 'TRIALID';
