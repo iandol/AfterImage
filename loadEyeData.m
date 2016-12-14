@@ -3,6 +3,7 @@ analyze = 'contrast';
 
 clear e task msaccB msaccW AllsaccB AllsaccW g
 [fn,pn]=uigetfile('*.mat','Load MAT File');
+if isnumeric(fn);disp('No file selected...');return;end
 cd(pn);
 load(fn);
 fn2 = regexprep(fn,'\.mat$','.edf');
@@ -79,13 +80,15 @@ switch analyze
 		a = 1; b = 1; msaccB = []; 
 		for i = blackIdx
 			msaccB(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
-			for j = 1:length(e.trials(i).msacc)
-				if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
-					AllsaccB(b).trial = a;
-					AllsaccB(b).time = e.trials(i).msacc(j).time;
-					AllsaccB(b).velocity = e.trials(i).msacc(j).velocity;
-					AllsaccB(b).rho = e.trials(i).msacc(j).rho;
-					b = b + 1;
+			if msaccB(a) > 0
+				for j = 1:length(e.trials(i).msacc)
+					if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+						AllsaccB(b).trial = a;
+						AllsaccB(b).time = e.trials(i).msacc(j).time;
+						AllsaccB(b).velocity = e.trials(i).msacc(j).velocity;
+						AllsaccB(b).rho = e.trials(i).msacc(j).rho;
+						b = b + 1;
+					end
 				end
 			end
 			a = a + 1;
@@ -94,13 +97,15 @@ switch analyze
 		a = 1; b = 1; msaccW = [];
 		for i = whiteIdx
 			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
-			for j = 1:length(e.trials(i).msacc)
-				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 && e.trials(i).msacc(j).isMicroSaccade
-					AllsaccW(b).trial = a;
-					AllsaccW(b).time = e.trials(i).msacc(j).time;
-					AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
-					AllsaccW(b).rho = e.trials(i).msacc(j).rho;
-					b = b + 1;
+			if msaccW(a) > 0
+				for j = 1:length(e.trials(i).msacc)
+					if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 && e.trials(i).msacc(j).isMicroSaccade
+						AllsaccW(b).trial = a;
+						AllsaccW(b).time = e.trials(i).msacc(j).time;
+						AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
+						AllsaccW(b).rho = e.trials(i).msacc(j).rho;
+						b = b + 1;
+					end
 				end
 			end
 			a = a + 1;
@@ -110,7 +115,7 @@ switch analyze
 		g.run
 		
 		fn = regexprep(fn,'\.mat$','_MSACC.mat');
-		save(fn, 'e', 'msaccB', 'msaccW', 'AllsaccB', 'AllsaccW');
+		save(fn, 'e', 'msaccB', 'msaccW', 'AllsaccB', 'AllsaccW', 'pedestals', 'responses', 'pedEye', 'responsesEye');
 		
 	case 'latency'
 		e.variableMessageName		= 'TRIALID';
