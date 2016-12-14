@@ -23,9 +23,9 @@ switch analyze
 		e.VFAC								= 6;
 		e.MINDUR							= 3;
 		e.excludeIncorrect		= false;
-		e.simpleParse;
-		e.pruneNonRTTrials;
-		e.parseSaccades;
+		e.parseSimple();
+		e.pruneNonRTTrials();
+		e.parseSaccades();
 		
 		% DATA FROM MAT FILE
 		responses = task.response.response;
@@ -69,6 +69,8 @@ switch analyze
 			responses - responsesEye
 		end
 		
+		e.updateCorrectIndex(cidx);
+		
 		if length(contrasts) == length(cidx)
 			blackIdx = cidx(contrasts==0);
 			whiteIdx = cidx(contrasts==1);
@@ -93,7 +95,7 @@ switch analyze
 		for i = whiteIdx
 			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
 			for j = 1:length(e.trials(i).msacc)
-				if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+				if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 && e.trials(i).msacc(j).isMicroSaccade
 					AllsaccW(b).trial = a;
 					AllsaccW(b).time = e.trials(i).msacc(j).time;
 					AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
@@ -108,7 +110,7 @@ switch analyze
 		g.run
 		
 		fn = regexprep(fn,'\.mat$','_MSACC.mat');
-		save(fn, 'msaccB','msaccW','AllsaccB','AllsaccW');
+		save(fn, 'e', 'msaccB', 'msaccW', 'AllsaccB', 'AllsaccW');
 		
 	case 'latency'
 		e.variableMessageName		= 'TRIALID';
@@ -122,7 +124,7 @@ switch analyze
 		e.measureRange					= [-0.5 5];
 		e.plotRange							= [-0.5 4];
 		e.excludeIncorrect			= false;
-		e.simpleParse;
+		e.parseSimple;
 		e.pruneNonRTTrials;
 		e.parseSaccades;
 		e.plot(e.correct.idx(1:10));
