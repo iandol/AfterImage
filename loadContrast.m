@@ -50,20 +50,20 @@ else
 	mm{n}='AIMOC_Ian_2016_12_2_12_8_0.mat';				n=n+1;
 	mm{n}='AIMOC_ChenZY_2016_12_2_14_55_3.mat';		n=n+1;
 	
-	st.pedestalRange				= 0:0.05:0.4;
-	st.pedestalBlackLinear		= 0.5 - fliplr(st.pedestalRange);
-	st.pedestalWhiteLinear		= 0.5 + st.pedestalRange;
-	st.StimLevels					= st.pedestalRange;
-	st.grain							= 300;
-	st.StimLevelsFineGrain		= linspace(min(st.StimLevels),max(st.StimLevels),st.grain);
-	st.nTrials						= 8;
-	st.doModelComparison			= true;
-	st.doModelComparisonSingle = false;
-	st.noSEEWeight					= 0.5;
-	st.totalT						= 72;
-	st.useFixed						= true;
-	st.maxGamma						= 0.5;
-	st.PF								= @PAL_Weibull;
+	st.pedestalRange						= 0:0.05:0.4;
+	st.pedestalBlackLinear			= 0.5 - fliplr(st.pedestalRange);
+	st.pedestalWhiteLinear			= 0.5 + st.pedestalRange;
+	st.StimLevels								= st.pedestalRange;
+	st.grain										= 200;
+	st.StimLevelsFineGrain			= linspace(min(st.StimLevels),max(st.StimLevels),st.grain);
+	st.nTrials									= 8;
+	st.doModelComparisonSingle	= false;
+	st.doModelComparison				= false;
+	st.noSEEWeight							= 0.5;
+	st.totalT										= 81;
+	st.useFixed									= true;
+	st.maxGamma									= 0.45;
+	st.PF												= @PAL_Weibull;
 end
 
-Contrast_Pedestal_Fitting(mm,st);
+maskedAIContrastAnalysis(mm,st);

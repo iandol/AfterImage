@@ -1,4 +1,4 @@
-function Contrast_Pedestal_Fitting(filename, st)
+function maskedAIContrastAnalysis(filename, st)
 
 if ~exist('filename','var')
 	filename = '';
@@ -24,7 +24,7 @@ if ~exist('st','var')  || isempty(st)
 	st.doModelComparisonSingle = false;
 	st.totalT				= 64;
 	st.useFixed		= true;
-	st.maxGamma = 0.5;
+	st.maxGamma = 0.51;
 	st.PF				= @PAL_Weibull;
 end
 
@@ -153,25 +153,25 @@ g.run;
 
 %%%%%%%%%%%%%%%%%%%%%%statistics on integrals%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i=1:length(mm)
-	kB=find(model0(i,:)>=0.5);
-	kW=find(model1(i,:)>=0.5);
-	Bhight=0.5-model0(i,1:kB(1)-1);
-	Whight=0.5-model1(i,1:kW(1)-1);
-	IntB(i)=sum(Bhight*0.4/50);
-	IntW(i)=sum(Whight*0.4/50);
+% 	kB=find(model0(i,:)>=0.5);
+% 	kW=find(model1(i,:)>=0.5);
+% 	Bhight=0.5-model0(i,1:kB(1)-1);
+% 	Whight=0.5-model1(i,1:kW(1)-1);
+% 	IntB(i)=sum(Bhight*0.4/50);
+% 	IntW(i)=sum(Whight*0.4/50);
 	
-% 	idxB=find(model0(i,:)<=0.5);
-% 	idxW=find(model1(i,:)<=0.5);
-% 	intB(i)=trapz(st.StimLevelsFineGrain(idxB),abs(0.5-model0(i,idxB)));
-% 	intW(i)=trapz(st.StimLevelsFineGrain(idxW),abs(0.5-model1(i,idxW)));
+	idxB=find(model0(i,:)<=0.5);
+	idxW=find(model1(i,:)<=0.5);
+	intB(i)=trapz(st.StimLevelsFineGrain(idxB),abs(0.5-model0(i,idxB)));
+	intW(i)=trapz(st.StimLevelsFineGrain(idxW),abs(0.5-model1(i,idxW)));
 end
 
-g = getDensity('x',IntB,'y',IntW,...
-	'legendtxt',{'DARK','BRIGHT'},'columnlabels',{'Contrast Integral'});
+g = getDensity('x',intB,'y',intW,...
+	'legendtxt',{'DARK','BRIGHT'},'columnlabels',{'TRAPZ Contrast Integral'});
 g.run;
-% g.x = intB;
-% g.y = intW;
-% g.columnlabels = {'TRAPZ Contrast Integral'};
+% g.x = IntB;
+% g.y = IntW;
+% g.columnlabels = {'Contrast Integral'};
 % g.run;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

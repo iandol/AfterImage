@@ -2,9 +2,11 @@ function maskedAILatAnalysis()
 % oldDir = pwd;
 % [PathName] = uigetdir('','Select the DATA Folder:');
 % cd(PathName)
+if ismac; cd('/Volumes/Data/AfterImages/DATA/'); end
 
 PF			= @PAL_Weibull;
-avgF		= @nanmedian;
+avgF		= @nanmean;
+stest		= @signrank;
 errF		= 'SE';
 NOSEE		= 1;
 YESSEE	= 2;
@@ -156,7 +158,8 @@ grid on; grid minor; box on
 [mBe, mB] = stderr(Bthreshold,errF,0.05,avgF);
 [mWe, mW] = stderr(Wthreshold,errF,0.05,avgF);
 
-pval = signrank(Bthreshold,Wthreshold);
+[pval,p2] = stest(Bthreshold,Wthreshold);
+if islogical(pval) || pval == 1; pval = p2; end
 [~,pvalvar] = vartest2(Bthreshold,Wthreshold);
 
 if length(mBe)==1

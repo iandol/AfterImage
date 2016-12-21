@@ -1,3 +1,5 @@
+if ismac; cd('/Volumes/Data/AfterImages/DATA/'); end
+
 errortype = 'sem';
 
 revision = 3;
@@ -51,15 +53,15 @@ g.set_title('Relation of Afterimage Duration to Contrast and Stimulus duration')
 g.draw;
 
 
-[p2,tbl3,stats2]=anovan(aidur.AI_Duration,{aidur.Stimulus_Duration,aidur.Contrast},'model','interaction','varnames',{'StimDuration','Contrast'});set(gcf,'Name','Duration Results')
+[p,tbl1,stats]=anovan(aidur.AI_Duration,{aidur.Stimulus_Duration,aidur.Contrast},'model','interaction','varnames',{'StimDuration','Contrast'});set(gcf,'Name','Duration Results')
 figure('Position',[20 60 1000 1000],'Name','Duration Results')
-[c,~,~,gnames]=multcompare(stats2,'CType','tukey-kramer','Dimension',[1 2]);set(gcf,'Name','Duration Results')
+[c,~,~,gnames]=multcompare(stats,'CType','tukey-kramer','Dimension',[1 2]);set(gcf,'Name','Duration Results')
 ptable=[gnames(c(:,1)),gnames(c(:,2)),num2cell(c(:,3:6))];
 
 eightsec.data = aidur.AI_Duration(aidur.Stimulus_Duration==8);
 eightsec.contrast = aidur.Contrast(aidur.Stimulus_Duration==8);
 
-[p,tbl4,stats]=anova1(eightsec.data,eightsec.contrast,'varnames',{'Ctrst'});set(gcf,'Name','Duration Results for 8 Secs Duration')
+[p2,tbl2,stats]=anova1(eightsec.data,eightsec.contrast,'varnames',{'Ctrst'});set(gcf,'Name','Duration Results for 8 Secs Duration')
 figure('Position',[10 40 1000 1000],'Name','Duration Results for 8 Secs Duration')
 [c,~,~,gnames]=multcompare(stats,'CType','tukey-kramer');set(gcf,'Name','Duration Results for 8 Secs Duration')
 ptable2=[gnames(c(:,1)),gnames(c(:,2)),num2cell(c(:,3:6))];
@@ -67,7 +69,7 @@ ptable2=[gnames(c(:,1)),gnames(c(:,2)),num2cell(c(:,3:6))];
 foursec.data = aidur.AI_Duration(aidur.Stimulus_Duration==4);
 foursec.contrast = aidur.Contrast(aidur.Stimulus_Duration==4);
 
-[p,tbl5,stats]=anova1(foursec.data,foursec.contrast,'varnames',{'Ctrst'});set(gcf,'Name','Duration Results for 4 Secs Duration')
+[p3,tbl3,stats]=anova1(foursec.data,foursec.contrast,'varnames',{'Ctrst'});set(gcf,'Name','Duration Results for 4 Secs Duration')
 figure('Position',[10 40 1000 1000],'Name','Duration Results for 4 Secs Duration')
 [c,~,~,gnames]=multcompare(stats,'CType','tukey-kramer');set(gcf,'Name','Duration Results for 4 Secs Duration')
 ptable3=[gnames(c(:,1)),gnames(c(:,2)),num2cell(c(:,3:6))];

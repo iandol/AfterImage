@@ -28,6 +28,8 @@ switch analyze
 		e.pruneNonRTTrials();
 		e.parseSaccades();
 		
+		plotRange = [0 4];
+		
 		% DATA FROM MAT FILE
 		responses = task.response.response;
 		contrasts = task.response.contrastOut;
@@ -79,10 +81,10 @@ switch analyze
 		
 		a = 1; b = 1; msaccB = []; 
 		for i = blackIdx
-			msaccB(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
+			msaccB(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > plotRange(1) & e.trials(i).microSaccades < plotRange(2)));
 			if msaccB(a) > 0
 				for j = 1:length(e.trials(i).msacc)
-					if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 
+					if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= plotRange(1) && e.trials(i).msacc(j).time <= plotRange(2) 
 						AllsaccB(b).trial = a;
 						AllsaccB(b).time = e.trials(i).msacc(j).time;
 						AllsaccB(b).velocity = e.trials(i).msacc(j).velocity;
@@ -96,10 +98,10 @@ switch analyze
 		
 		a = 1; b = 1; msaccW = [];
 		for i = whiteIdx
-			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > 0 & e.trials(i).microSaccades < 4));
+			msaccW(a) = length(e.trials(i).microSaccades(e.trials(i).microSaccades > plotRange(1) & e.trials(i).microSaccades < plotRange(2)));
 			if msaccW(a) > 0
 				for j = 1:length(e.trials(i).msacc)
-					if e.trials(i).msacc(j).time >= 0 && e.trials(i).msacc(j).time <= 4 && e.trials(i).msacc(j).isMicroSaccade
+					if e.trials(i).msacc(j).isMicroSaccade && e.trials(i).msacc(j).time >= plotRange(1) && e.trials(i).msacc(j).time <= plotRange(2)
 						AllsaccW(b).trial = a;
 						AllsaccW(b).time = e.trials(i).msacc(j).time;
 						AllsaccW(b).velocity = e.trials(i).msacc(j).velocity;
