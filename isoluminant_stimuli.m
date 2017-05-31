@@ -30,7 +30,7 @@ nameExp = [nameExp c];
 
 %---------------------- viewing parameters -------------------------------
 screenID = max(Screen('Screens'));%-1;
-pixelsPerCm = 35;\n
+pixelsPerCm = 35;
 distance = 56.5;
 windowed = [0 0 1000 1000];
 backgroundColor = [0.5 0.5 0.5];
@@ -42,6 +42,7 @@ try
 	
 	sM = screenManager();
 	sM.screen = screenID;
+	sM.windowed = windowed;
 	sM.pixelsPerCm = pixelsPerCm;
 	sM.distance = distance;
 	sM.backgroundColour = backgroundColor;
@@ -223,7 +224,7 @@ try
 				continue
 			end
 			iii = iii+1;
-			Screen('FillRect', sM.win, [0 0 0], wrect);
+			Screen('FillRect', sM.win, [0 0 0], sM.winRect);
 			Screen('Flip',sM.win);
 			pause(1);
 		end % END iii <= trials
@@ -250,7 +251,6 @@ end
 
 	function saveMetaData()
 		
-		
 		ana.ResultDir =  ResultDir;
 		ana.backgroundColor = backgroundColor;
 		ana.stdDis = stdDis;
@@ -270,5 +270,6 @@ end
 		ana.firstFixTime = firstFixTime;
 		ana.firstFixRadius = firstFixRadius;
 		ana.strictFixation = strictFixation;
+		
 	end
 end
