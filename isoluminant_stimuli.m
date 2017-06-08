@@ -30,13 +30,15 @@ c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 ana.nameExp = [nameExp c];
 
-%--------------fixation parameters----------------------------
-fixX = 0;
-fixY = 0;
-firstFixInit = 1;
-firstFixTime = 1;
-firstFixRadius = 1;
-strictFixation = true;
+%---------------------- viewing parameters -------------------------------
+screenID = max(Screen('Screens'));%-1;
+pixelsPerCm = 35;
+distance = 56.5;
+windowed = [0 0 1000 1000];
+backgroundColor = [0.5 0.5 0.5];
+frequency = 0.3;
+circle_diameter = 6;
+duration = 30;
 
 try
 	PsychDefaultSetup(2);
@@ -48,6 +50,7 @@ try
 	sM.pixelsPerCm = ana.pixelsPerCm;
 	sM.distance = ana.distance;
 	sM.backgroundColour = ana.backgroundColor;
+
 	sM.open;
 	
 	%============================SET UP VARIABLES=====================================
@@ -197,7 +200,9 @@ try
 			else
 				iii = iii+1;
 			end
+
 			WaitSecs('YieldSecs',1);
+
 		end % END iii <= trials
 		if iii>=trials; breakLoop = true; end
 		
@@ -218,11 +223,13 @@ end
 
 
 	function saveMetaData()
+
 		ana.fixX = fixX;
 		ana.fixY = fixY;
 		ana.firstFixInit = firstFixInit;
 		ana.firstFixTime = firstFixTime;
 		ana.firstFixRadius = firstFixRadius;
 		ana.strictFixation = strictFixation;
+		
 	end
 end
