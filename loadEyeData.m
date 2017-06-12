@@ -69,7 +69,7 @@ switch analyze
 			warning('Length of MAT and EDF responses not the same !!!')
 		elseif ~all(responses==responsesEye)
 			warning('Content of MAT and EDF responses not the same !!!')
-			responses - responsesEye
+			responses = responsesEye;
 		end
 		
 		e.updateCorrectIndex(cidx);
