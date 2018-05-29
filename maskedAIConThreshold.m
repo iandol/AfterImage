@@ -1,4 +1,4 @@
-function maskedAIContrast()
+function maskedAIConThreshold()
 
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
@@ -16,15 +16,15 @@ useStaircase = true;
 stimTime = 4;
 pedestalTime = 0.4;
 maskTime = 1.5;
-sigma = 10;
+sigma = 3;
 discSize = 3;
 if useStaircase == true
 	PF = @PAL_Gumbel;
-	pedestalRange = 0:0.025:1;
+	pedestalRange = 0:0.02:0.4;
 else
-	pedestalRange = 0:0.05:0.3;
+	pedestalRange = 0:0.02:0.4; % pedestalRange here is the stimulus contrast 
 end
-nBlocks = 5;
+nBlocks = 2;
 nBlocksOverall = nBlocks * length(pedestalRange);
 
 if strcmpi(lab,'lab305_aristotle')
@@ -46,7 +46,7 @@ if strcmpi(lab,'lab305_aristotle')
 		pedestalWhite = pedestalRange;
 		pedestalWhiteLinear = pedestalWhite;
 	else
-		pedestalBlack = 0.5 - fliplr(pedestalRange);
+		pedestalBlack = 0.5 - pedestalRange;
 		pedestalBlackLinear = pedestalBlack;
 		pedestalWhite = 0.5 + pedestalRange;
 		pedestalWhiteLinear = pedestalWhite;
@@ -71,7 +71,7 @@ elseif strcmpi(lab,'lab214_aristotle')
 end
 
 %-------------------response values, linked to left, up, down
-NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
+NOSEE = 1; 	YESSEE = 2; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
 XPos = [3 1.5 -1.5 -1.5 1.5 -3];
@@ -214,9 +214,9 @@ try %our main experimental try catch loop
 	
 	figH = figure('Position',[0 0 900 700],'NumberTitle','off','Name',...
 		['Subject: ' subject ' @ ' lab ' started ' datestr(now) ' | ' comments]);
-	box on; grid on; grid minor; ylim([0 1]);
+	box on; grid on; grid minor; ylim([0.1 0.9]);
 	xlabel('Trials (red=BLACK blue=WHITE)')
-	ylabel('Pedestal Contrast')
+	ylabel('Stimulus Luminance')
 	title('Masked Contrast Pedestal Experiment')
 	drawnow; WaitSecs(0.25);
 	
@@ -229,9 +229,9 @@ try %our main experimental try catch loop
 		stimuli{1}.colourOut = colourOut;
 		if useStaircase == true
 			if colourOut == 0
-				pedestal = staircaseB.xCurrent;
+				pedestal = 0.5-staircaseB.xCurrent;
 			else
-				pedestal = staircaseW.xCurrent;
+				pedestal = 0.5+staircaseW.xCurrent;
 			end
 		else
 			if colourOut == 0
@@ -246,6 +246,8 @@ try %our main experimental try catch loop
 		stimuli{1}.yPositionOut = YPos(posloop);
 		stimuli.maskStimuli{1}.xPositionOut = XPos(posloop);
 		stimuli.maskStimuli{1}.yPositionOut = YPos(posloop);
+		stimuli{1}.colourOut = pedestal;  % addd by xu
+		
 		ts.x = XPos(posloop);
 		ts.y = YPos(posloop);
 		ts.size = stimuli{1}.size;
@@ -314,7 +316,7 @@ try %our main experimental try catch loop
 				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
 				continue
 			end
-			stimuli{1}.colourOut = pedestal;
+			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + pedestalTime
 				draw(stimuli); %draw stimulus
@@ -346,7 +348,7 @@ try %our main experimental try catch loop
 			end
 			
 			drawBackground(sM);
-			Screen('DrawText',sM.win,['See anything AFTER stimulus: [LEFT]=NO [UP]=BRIGHTER [DOWN]=DARKER [RIGHT]=SHOW AGAIN'],0,0);
+			Screen('DrawText',sM.win,['See anything: [LEFT]=YES  [RIGHT]=NO  [DOWN]=UNSURE'],0,0);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
@@ -366,34 +368,25 @@ try %our main experimental try catch loop
 				switch lower(rchar)
 					case {'leftarrow','left'}
 						breakloopkey = true; fixated = 'no';
-						response = NOSEE;
+						response = YESSEE;
 						updateResponse();
 						if useEyeLink
 							trackerDrawText(eL,'Subject Pressed LEFT!');
 							edfMessage(eL,'Subject Pressed LEFT')
 						end
 						doPlot();
-					case {'uparrow','up'} %brighter than
-						breakloopkey = true; fixated = 'no';
-						response = YESBRIGHT;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed RIGHT!');
-							edfMessage(eL,'Subject Pressed RIGHT')
-						end
-						doPlot();
 					case {'downarrow','down'} %darker than
 						breakloopkey = true; fixated = 'no';
-						response = YESDARK;
+						response = UNSURE;
 						updateResponse();
 						if useEyeLink
 							trackerDrawText(eL,'Subject Pressed RIGHT!');
 							edfMessage(eL,'Subject Pressed RIGHT')
 						end
 						doPlot();
-					case {'righttarrow','right'}
+					case {'rightarrow','right'}
 						breakloopkey = true; fixated = 'no';
-						response = UNSURE;
+						response = NOSEE;
 						updateResponse();
 						if useEyeLink
 							trackerDrawText(eL,'Subject UNSURE!');
@@ -490,7 +483,7 @@ end
 	function updateResponse()
 		tEnd = GetSecs;
 		ListenChar(0);
-		if response == NOSEE || response == YESBRIGHT || response == YESDARK %subject responded
+		if response == NOSEE || response == YESSEE  %subject responded
 			responseInfo.response = response;
 			responseInfo.N = task.thisRun;
 			responseInfo.times = [tFix tStim tPedestal tMask tMaskOff tEnd];
@@ -503,14 +496,14 @@ end
 			updateTask(task,response,tEnd,responseInfo)
 			if useStaircase == true
 				if colourOut == 0
-					if response == NOSEE || response == YESBRIGHT
+					if response == NOSEE 
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
 					end
 					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse);
 				elseif colourOut == 1
-					if response == NOSEE || response == YESDARK
+					if response == NOSEE 
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
@@ -557,20 +550,20 @@ end
 		idxB = [info.contrastOut] == 0;
 		
 		idxNO = task.response == NOSEE;
-		idxYESBRIGHT = task.response == YESBRIGHT;
-		idxYESDARK = task.response == YESDARK;
+		idxYESSEE = task.response == YESSEE;
+
 		
 		if useStaircase == true
 			subplot(2,1,1)
 		end
+				
 		
 		cla; line([0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold on
 		plot(x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
 		plot(x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
-		plot(x(idxYESDARK & idxB), ped(idxYESDARK & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESDARK & idxW), ped(idxYESDARK & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESBRIGHT & idxB), ped(idxYESBRIGHT & idxB),'r^','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESBRIGHT & idxW), ped(idxYESBRIGHT & idxW),'b^','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESSEE & idxB), ped(idxYESSEE & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESSEE & idxW), ped(idxYESSEE & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
+
 		
 		if length(task.response) > 4
 			try %#ok<TRYNC>
@@ -592,9 +585,9 @@ end
 			t = sprintf('TRIAL:%i', task.thisRun);
 			title(t);
 		end
-		box on; grid on; ylim([0 1]); xlim([0 max(x)+1]);
+		box on; grid on; ylim([0.1 0.9]); xlim([0 max(x)+1]);
 		xlabel('Trials (red=BLACK blue=WHITE)')
-		ylabel('Pedestal Contrast')
+		ylabel('Stimulus Luminance')
 		hold off
 		if useStaircase == true
 			subplot(2,1,2)
@@ -627,8 +620,8 @@ end
 				plot(t(yes), ones(1,sum(yes)),'bo','MarkerFaceColor','b','MarkerSize',8);
 				plot(t(no), zeros(1,sum(no)),'bo','MarkerFaceColor','w','MarkerSize',8);
 			end
-			box on; grid on; ylim([0 1]); xlim([0 1]);
-			xlabel('Luminance (red=BLACK blue=WHITE)');
+			box on; grid on; ylim([0 1]); xlim([0 0.5]);
+			xlabel('Contrast (red=BLACK blue=WHITE)');
 			ylabel('Responses');
 			hold off
 		end
@@ -638,7 +631,7 @@ end
 	function setupStairCase()
 		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack),grain);
 		priorAlphaW = linspace(min(pedestalWhite), max(pedestalWhite),grain);
-		priorBetaB = linspace(-5, 0, 30); %our slope
+		priorBetaB = linspace(0, 5, 30); %our slope
 		priorBetaW = linspace(0, 5, 30); %our slope
 		priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter)
 		priorLambdaRange = 0.01; %ditto
@@ -647,14 +640,14 @@ end
 			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBetaB,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
-		
+		staircaseB.xCurrent=0.4;
 		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',PF,...
 			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBetaW,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
 		
 		if usePriors
-			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.2,0.3).*PAL_pdfNormal(staircaseB.priorBetas,-3,5);
+			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.8,0.3).*PAL_pdfNormal(staircaseB.priorBetas,3,5);
 			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.8,0.3).*PAL_pdfNormal(staircaseW.priorBetas,3,5);
 			figure;
 			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
@@ -694,8 +687,7 @@ end
 		md.sigma = sigma;
 		md.discSize = discSize;
 		md.NOSEE = NOSEE;
-		md.YESBRIGHT = YESBRIGHT;
-		md.YESDARK = YESDARK;
+		md.YESSEE = YESSEE;
 		md.UNSURE = UNSURE;
 		md.BREAKFIX = BREAKFIX;
 		md.XPos = XPos;

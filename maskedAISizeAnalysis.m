@@ -1,4 +1,4 @@
-function maskedAIContrastAnalysis(filename, st)
+function maskedAISize2Analysis(filename, st)
 
 if ~exist('filename','var')
 	filename = '';
@@ -13,9 +13,9 @@ end
 
 if ~exist('st','var')  || isempty(st)
 	st.useFixed = true;
-	st.pedestalRange = [0:0.05:0.3];
-	st.pedestalBlackLinear = 0.5 - fliplr(st.pedestalRange);
-	st.pedestalWhiteLinear = 0.5 + st.pedestalRange;
+	st.pedestalRange = 2.5:0.1:3.5;
+	st.pedestalBlackLinear = 2.5:0.1:3.5;
+	st.pedestalWhiteLinear = 2.5:0.1:3.5;
 	st.StimLevels					= st.pedestalRange;
 	st.StimLevelsFineGrain = linspace(min(st.StimLevels),max(st.StimLevels),200);
 	st.nTrials = 5;

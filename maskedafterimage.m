@@ -9,7 +9,7 @@ subject = 'Ian';
 lab = 'dorrislablinear'; %dorris lab or our machine?
 comments = '';
 useStaircase = false;
-stimTime = 4;
+stimTime = 6;
 pedestalTime = 0.35;
 maskTime = 1;
 nBlocks = 128; %number of repeated blocks?
@@ -20,7 +20,7 @@ if strcmpi(lab,'dorrislablinear')
 	c=load('Calib_Dorris_G520.mat');
 	calibrationFile = c.c;
 	backgroundColour = [0.5 0.5 0.5];
-	useEyeLink = true;
+	useEyeLink = false;
 	isDummy = false;
 	pixelsPerCm = 26; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
 	distance = 64.5; %64.5 in Dorris lab;
@@ -34,7 +34,7 @@ if strcmpi(lab,'dorrislablinear')
 elseif strcmpi(lab,'dorrislab')
 	calibrationFile = '';
 	backgroundColour = [0.6863 0.6863 0.6863];
-	useEyeLink = true;
+	useEyeLink = false;
 	isDummy = false;
 	pixelsPerCm = 26; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
 	distance = 64.5; %64.5 in Dorris lab;
@@ -48,7 +48,7 @@ elseif strcmpi(lab,'dorrislab')
 else
 	calibrationFile = ''; %load('Calib_Dell_LCD.mat');
 	backgroundColour = [0.6863 0.6863 0.6863];
-	useEyeLink = true;
+	useEyeLink = false;
 	isDummy = false;
 	pixelsPerCm = 26; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
 	distance = 64.5; %64.5 in Dorris lab;
@@ -437,10 +437,10 @@ try %our main experimentqal try catch loop
 		end
 		figure(figH);
 		drawnow;
-		resetFixation(eL);
-		stopRecording(eL);
-		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);
-		setOffline(eL);
+% 		resetFixation(eL); % 20180428 by Xu
+% 		stopRecording(eL); % 20180428 by Xu
+% 		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]); % 20180428 by Xu
+% 		setOffline(eL);   % 20180428 by Xu
 		drawBackground(s);
 		Screen('Flip',s.win); %flip the buffer
 		WaitSecs(0.5);
@@ -453,11 +453,11 @@ try %our main experimentqal try catch loop
 	if isstr(p)
 		cd(p);
 		md = saveMetaData();
-		save([nameExp '.mat'], 'task', 'taskB', 'taskW', 'md', 's', 'stimuli', 'eL');
+		save([nameExp '.mat'], 'task', 'taskB', 'taskW', 'md', 's', 'stimuli');% 'eL',20180425 by XU
 		if ishandle(figH); saveas(figH, [nameExp '.fig']); end
 		disp(['=====SAVE, saved current data to: ' pwd]);
 	else
-		eL.saveFile = ''; %blank save file so it doesn't save
+		eL.saveFile = ''; %blank save file so it doesn't save  
 	end
 	if useEyeLink == true; close(eL); end
 	reset(stimuli); %reset our stimulus ready for use again
@@ -467,7 +467,7 @@ catch ME
 	Priority(0); ListenChar(0); ShowCursor;
 	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
 	md = saveMetaData();
-	save([nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW', 'md', 's', 'stimuli', 'eL', 'ME')
+	save([nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW', 'md', 's', 'stimuli','ME') % 'eL', 20180425
 	if ishandle(figH); saveas(figH, [nameExp 'CRASH.fig']); end
 	ple(ME)
 	if useEyeLink == true; eL.saveFile = [nameExp 'CRASH.edf']; close(eL); end

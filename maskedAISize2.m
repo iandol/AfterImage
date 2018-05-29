@@ -1,31 +1,27 @@
-function maskedAIContrast()
+function maskedAISize2()
 
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
 KbName('UnifyKeyNames');
 
 %------------Base Experiment settings--------------
-sinfo = inputdlg({'\bfSubject Name','Comments (\itroom, lights etc.)'},...
-	'Afterimage Contrast Matching',...
-	[1 50;5 50],{'Anon',''},struct('Resize','on','Interpreter','tex'));
-if isempty(sinfo);return;end
-subject = sinfo{1};
-comments = sinfo{2};
+ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
+subject = ans{1};
 lab = 'lab305_aristotle'; %which lab and machine?
-useStaircase = true;
-stimTime = 4;
+comments = ans{2};
+useStaircase = false;
+stimTime = 6;
 pedestalTime = 0.4;
 maskTime = 1.5;
-sigma = 10;
-discSize = 3;
-if useStaircase == true
-	PF = @PAL_Gumbel;
-	pedestalRange = 0:0.025:1;
-else
-	pedestalRange = 0:0.05:0.3;
-end
-nBlocks = 5;
+sigma = 2;
+pedestalRange = 2.5:0.1:3.5;
+nBlocks = 1;
 nBlocksOverall = nBlocks * length(pedestalRange);
+posloop = 1;
+pedestalBlackLinear = pedestalRange;
+pedestalWhiteLinear = pedestalRange;
+pedestalBlack =  pedestalRange;
+pedestalWhite = pedestalRange;  % by Xu20180515
 
 if strcmpi(lab,'lab305_aristotle')
 	calibrationFile=load('AOCat60Hz_COLOR.mat');
@@ -40,49 +36,20 @@ if strcmpi(lab,'lab305_aristotle')
 	windowed = [];
 	useScreen = 1; %screen 2 in D-lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
-	if useStaircase
-		pedestalBlack = pedestalRange;
-		pedestalBlackLinear = pedestalBlack;
-		pedestalWhite = pedestalRange;
-		pedestalWhiteLinear = pedestalWhite;
-	else
-		pedestalBlack = 0.5 - fliplr(pedestalRange);
-		pedestalBlackLinear = pedestalBlack;
-		pedestalWhite = 0.5 + pedestalRange;
-		pedestalWhiteLinear = pedestalWhite;
-	end
-elseif strcmpi(lab,'lab214_aristotle')
-	calibrationFile=load('Calib-AristotlePC-G5201280x1024x852.mat');
-	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
-		calibrationFile = calibrationFile.c;
-	end
-	backgroundColour = [0.5 0.5 0.5];
-	useEyeLink = true;
-	isDummy = false;
-	pixelsPerCm = 36; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 56.5; %64.5 in D-lab;
-	windowed = [];
-	useScreen = 2; %screen 2 in D-lab is CRT
-	eyelinkIP = []; %keep it empty to force the default
-	pedestalBlackLinear = 0.5 - fliplr(pedestalRange);
-	pedestalWhiteLinear = 0.5 + pedestalRange;
-	pedestalBlack =  pedestalBlackLinear;
-	pedestalWhite = pedestalWhiteLinear;
 end
 
 %-------------------response values, linked to left, up, down
-NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
+NOSEE = 1; 	YESRIGHT = 2; YESLEFT = 3; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
-XPos = [3 1.5 -1.5 -1.5 1.5 -3];
-YPos = [0 2.598 2.598 -2.598 -2.598 0];
-
+XPos1 = [1.414 1.414 -1.414 -1.414];     XPos2 = -XPos1;
+YPos1 = [1.414 -1.414 -1.414 1.414];     YPos2 = -YPos1;
 %----------------eyetracker settings-------------------------
 fixX = 0;
 fixY = 0;
 firstFixInit = 1;
 firstFixTime = 0.5;
-firstFixDiameter = 1.5;
+firstFixDiameter = 3;
 strictFixation = true;
 
 %----------------Make a name for this run-----------------------
@@ -94,33 +61,42 @@ nameExp = [nameExp c];
 
 %======================================================stimulus objects
 %---------------------main disc (stimulus and pedestal).
-st = discStimulus();
-st.name = ['STIM_' nameExp];
-st.xPosition = -3;
-st.colour = [1 1 1 1];
-st.size = discSize;
-st.sigma = sigma;
+st1 = discStimulus();  % white stimulus
+st1.name = ['STIM1_' nameExp];
+st1.xPosition = -3;
+st1.colour = [1 1 1 1];
+st1.size = 3;
+st1.sigma = sigma;
 
+st2 = discStimulus();   % black stimulus
+st2.name = ['STIM2_' nameExp];
+st2.xPosition = 3;
+st2.colour = [0 0 0 1];
+st2.size = 3;
+st2.sigma = sigma;
 %-----mask stimulus
 m = dotsStimulus();
 m.mask = true;
 m.density = 1000;
 m.coherence = 0;
-m.size = st.size+1;
+m.size = 8;
 m.speed=0.5;
 m.name = ['MASK_' nameExp];
-m.xPosition = st.xPosition;
-m.size = st.size;
+m.xPosition = 0;
 
 %----------combine them into a single meta stimulus------------------
+%% --combine them into a single meta stimulus------------------
+m1 =m; m1.xPosition = 0;
+m2 =m; m2.xPosition = 0;
+
 stimuli = metaStimulus();
 stimuli.name = nameExp;
-
-sidx = 1;
-maskidx = 1;
-stimuli{sidx} = st;
-stimuli.maskStimuli{maskidx} = m;
+stimuli.maskStimuli{1} = m1;
+stimuli.maskStimuli{2} = m2;
 stimuli.showMask = false;
+stimuli{1} = st1;
+stimuli{2} = st2;
+
 %======================================================stimulus objects
 
 %-----------------------open the PTB screens------------------------
@@ -130,13 +106,14 @@ sM = screenManager('verbose',false,'blend',true,'screen',useScreen,...
 	'debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 	'windowed',windowed,'backgroundColour',[backgroundColour 0],...
-	'gammaTable', calibrationFile); %use a temporary screenManager object
+	'gammaTable', calibrationFile); 
 screenVals = open(sM); %open PTB screen
 setup(stimuli,sM); %setup our stimulus object
 
 %---------------------setup eyelink---------------------------
 if useEyeLink == true
-	eL = eyelinkManager('IP',eyelinkIP); %eL.verbose = true;
+	eL = eyelinkManager('IP',eyelinkIP);
+	%eL.verbose = true;
 	eL.isDummy = isDummy; %use dummy or real eyelink?
 	eL.name = nameExp;
 	eL.saveFile = [nameExp '.edf'];
@@ -165,7 +142,7 @@ task = stimulusSequence();
 task.name = nameExp;
 task.nBlocks = nBlocksOverall;
 task.nVar(1).name = 'colour';
-task.nVar(1).stimulus = 1;
+task.nVar(1).stimulus = [1];
 task.nVar(1).values = [0 1];
 randomiseStimuli(task);
 initialiseTask(task);
@@ -176,8 +153,8 @@ if useStaircase == false
 	taskW.name = nameExp;
 	taskW.nBlocks = nBlocks;
 	taskW.nVar(1).name = 'pedestalWhite';
-	taskW.nVar(1).stimulus = 1;
-	taskW.nVar(1).values = pedestalWhite;
+	taskW.nVar(1).stimulus = [1];
+	taskW.nVar(1).values = pedestalWhite;% Xu 20180515
 	randomiseStimuli(taskW);
 	initialiseTask(taskW);
 	
@@ -185,15 +162,15 @@ if useStaircase == false
 	taskB.name = nameExp;
 	taskB.nBlocks = nBlocks;
 	taskB.nVar(1).name = 'pedestalBlack';
-	taskB.nVar(1).stimulus = 1;
-	taskB.nVar(1).values = pedestalBlack;
+	taskB.nVar(1).stimulus = [1];
+	taskB.nVar(1).values = pedestalBlack;% Xu 20180515
 	randomiseStimuli(taskB);
 	initialiseTask(taskB);
 else
 	taskB.thisRun = 0; taskW.thisRun = 0;
 	stopCriterion = 'trials';
 	trials = 40;
-	stopRule = 40;
+	stopRule = 30;
 	usePriors = true;
 	grain = 100;
 	setupStairCase();
@@ -206,27 +183,29 @@ try %our main experimental try catch loop
 	if useEyeLink == true; getSample(eL); end %ensure our eyelink code is in memory
 	
 	loop = 1;
-	posloop = 1;
 	breakloop = false;
 	fixated = 'no';
 	response = NaN;
+	
 	responseRedo = 0; %number of trials the subject was unsure and redid (left arrow)
 	
 	figH = figure('Position',[0 0 900 700],'NumberTitle','off','Name',...
 		['Subject: ' subject ' @ ' lab ' started ' datestr(now) ' | ' comments]);
-	box on; grid on; grid minor; ylim([0 1]);
+	box on; grid on; grid minor; ylim([2.4 3.6]);
 	xlabel('Trials (red=BLACK blue=WHITE)')
-	ylabel('Pedestal Contrast')
-	title('Masked Contrast Pedestal Experiment')
+	ylabel('Pedestal Size')
+	title('Masked Size Pedestal Experiment')
 	drawnow; WaitSecs(0.25);
 	
+	breakloop = false;
+
 	while ~breakloop && task.thisRun <= task.nRuns
 		%-----setup our values and print some info for the trial
 		hide(stimuli);
 		response = NaN;
 		stimuli.showMask = false;
+		stimuli{1}.colourOut = 1; stimuli{2}.colourOut = 0;
 		colourOut = task.outValues{task.thisRun,1};
-		stimuli{1}.colourOut = colourOut;
 		if useStaircase == true
 			if colourOut == 0
 				pedestal = staircaseB.xCurrent;
@@ -236,27 +215,40 @@ try %our main experimental try catch loop
 		else
 			if colourOut == 0
 				pedestal = taskB.outValues{taskB.thisRun,1};
-			else
-				pedestal = taskW.outValues{taskW.thisRun,1};
+				stimuli{1}.sizeOut = pedestal;
+				stimuli{2}.sizeOut = 3;
+				if posloop == 1 || posloop == 3; posloop = 2; else posloop = 1; end
+            else
+			    pedestal = taskW.outValues{taskW.thisRun,1};% Xu 20150515
+				 stimuli{1}.sizeOut = 3;
+				 stimuli{2}.sizeOut = pedestal;  
+				if posloop == 1 || posloop == 3; posloop = 4; else posloop = 3; end
 			end
 		end
+
+		stimuli{1}.xPositionOut = XPos1(posloop);
+		stimuli{1}.yPositionOut = YPos1(posloop);
+		stimuli{2}.xPositionOut = XPos2(posloop);
+		stimuli{2}.yPositionOut = YPos2(posloop);
 		
-		if posloop > 6; posloop = 1; end
-		stimuli{1}.xPositionOut = XPos(posloop);
-		stimuli{1}.yPositionOut = YPos(posloop);
-		stimuli.maskStimuli{1}.xPositionOut = XPos(posloop);
-		stimuli.maskStimuli{1}.yPositionOut = YPos(posloop);
-		ts.x = XPos(posloop);
-		ts.y = YPos(posloop);
-		ts.size = stimuli{1}.size;
-		ts.selected = true;
+
+		ts(1).x = XPos1(posloop);
+		ts(1).y = YPos1(posloop);
+		ts(1).size = stimuli{1}.sizeOut/sM.ppd;
+		ts(1).selected = true;
+		ts(2).x = XPos2(posloop);
+		ts(2).y = YPos2(posloop);
+		ts(2).size = stimuli{2}.sizeOut/sM.ppd;
+		ts(2).selected = true;
 		
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
+		Priority(MaxPriority(sM.win));
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
-		Priority(MaxPriority(sM.win));
-		posloop = posloop + 1;
+% 		posloop = posloop + 1;
 		stimuli.update();
+% 		stimuli.stimuli{1}.update();
+% 		stimuli.stimuli{2}.update();
 		stimuli.maskStimuli{1}.update();
 		
 		%-----initialise eyelink and draw fix spot
@@ -314,7 +306,7 @@ try %our main experimental try catch loop
 				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
 				continue
 			end
-			stimuli{1}.colourOut = pedestal;
+			stimuli{1}.colourOut = 0.5;stimuli{2}.colourOut = 0.5;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + pedestalTime
 				draw(stimuli); %draw stimulus
@@ -355,7 +347,6 @@ try %our main experimental try catch loop
 		tMaskOff = Screen('Flip',sM.win);
 		
 		%-----check keyboard
-		%timeout = GetSecs+5;
 		breakloopkey = false;
 		ListenChar(2);
 		while ~breakloopkey
@@ -363,10 +354,11 @@ try %our main experimental try catch loop
 			if keyIsDown == 1
 				rchar = KbName(keyCode);
 				if iscell(rchar);rchar=rchar{1};end
+				fprintf(' CHAR IS %s', rchar);
 				switch lower(rchar)
 					case {'leftarrow','left'}
 						breakloopkey = true; fixated = 'no';
-						response = NOSEE;
+						response = YESLEFT;
 						updateResponse();
 						if useEyeLink
 							trackerDrawText(eL,'Subject Pressed LEFT!');
@@ -375,29 +367,29 @@ try %our main experimental try catch loop
 						doPlot();
 					case {'uparrow','up'} %brighter than
 						breakloopkey = true; fixated = 'no';
-						response = YESBRIGHT;
+						response = NOSEE;
 						updateResponse();
 						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed RIGHT!');
-							edfMessage(eL,'Subject Pressed RIGHT')
+							trackerDrawText(eL,'Subject Pressed uparrow!');
+							edfMessage(eL,'Subject Pressed uparrow')
 						end
 						doPlot();
 					case {'downarrow','down'} %darker than
 						breakloopkey = true; fixated = 'no';
-						response = YESDARK;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed RIGHT!');
-							edfMessage(eL,'Subject Pressed RIGHT')
-						end
-						doPlot();
-					case {'righttarrow','right'}
-						breakloopkey = true; fixated = 'no';
 						response = UNSURE;
 						updateResponse();
 						if useEyeLink
-							trackerDrawText(eL,'Subject UNSURE!');
-							edfMessage(eL,'Subject UNSURE')
+							trackerDrawText(eL,'Subject Pressed UNSURE!');
+							edfMessage(eL,'Subject Pressed UNSURE')
+						end
+						doPlot();
+					case {'rightarrow','right'}
+						breakloopkey = true; fixated = 'no';
+						response = YESRIGHT;
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject RIGHT!');
+							edfMessage(eL,'Subject RIGHT')
 						end
 						doPlot();
 					case {'backspace','delete'}
@@ -438,7 +430,6 @@ try %our main experimental try catch loop
 						end
 				end
 			end
-			%if timeout<=GetSecs; breakloopkey = true; end
 		end
 		tEnd = GetSecs;
 		ListenChar(0);
@@ -490,7 +481,7 @@ end
 	function updateResponse()
 		tEnd = GetSecs;
 		ListenChar(0);
-		if response == NOSEE || response == YESBRIGHT || response == YESDARK %subject responded
+		if response == NOSEE || response == YESRIGHT || response == YESLEFT %subject responded
 			responseInfo.response = response;
 			responseInfo.N = task.thisRun;
 			responseInfo.times = [tFix tStim tPedestal tMask tMaskOff tEnd];
@@ -503,14 +494,14 @@ end
 			updateTask(task,response,tEnd,responseInfo)
 			if useStaircase == true
 				if colourOut == 0
-					if response == NOSEE || response == YESBRIGHT
+					if response == NOSEE || response == YESLEFT
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
 					end
 					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse);
 				elseif colourOut == 1
-					if response == NOSEE || response == YESDARK
+					if response == NOSEE || response == YESLEFT
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
@@ -549,6 +540,10 @@ end
 		ListenChar(0);
 		figure(figH);
 		
+		if isempty(task.response)
+			return
+		end
+		
 		x = 1:length(task.response);
 		info = cell2mat(task.responseInfo);
 		ped = [info.pedestal];
@@ -557,8 +552,8 @@ end
 		idxB = [info.contrastOut] == 0;
 		
 		idxNO = task.response == NOSEE;
-		idxYESBRIGHT = task.response == YESBRIGHT;
-		idxYESDARK = task.response == YESDARK;
+		idxYESRIGHT = task.response == YESRIGHT;
+		idxYESLEFT = task.response == YESLEFT;
 		
 		if useStaircase == true
 			subplot(2,1,1)
@@ -567,10 +562,10 @@ end
 		cla; line([0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold on
 		plot(x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
 		plot(x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
-		plot(x(idxYESDARK & idxB), ped(idxYESDARK & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESDARK & idxW), ped(idxYESDARK & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESBRIGHT & idxB), ped(idxYESBRIGHT & idxB),'r^','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESBRIGHT & idxW), ped(idxYESBRIGHT & idxW),'b^','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESLEFT & idxB), ped(idxYESLEFT & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESLEFT & idxW), ped(idxYESLEFT & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESRIGHT & idxB), ped(idxYESRIGHT & idxB),'r^','MarkerFaceColor','w','MarkerSize',8);
+		plot(x(idxYESRIGHT & idxW), ped(idxYESRIGHT & idxW),'b^','MarkerFaceColor','w','MarkerSize',8);
 		
 		if length(task.response) > 4
 			try %#ok<TRYNC>
@@ -592,9 +587,9 @@ end
 			t = sprintf('TRIAL:%i', task.thisRun);
 			title(t);
 		end
-		box on; grid on; ylim([0 1]); xlim([0 max(x)+1]);
+		box on; grid on; ylim([2.4 3.6]); xlim([0 max(x)+1]);
 		xlabel('Trials (red=BLACK blue=WHITE)')
-		ylabel('Pedestal Contrast')
+		ylabel('Pedestal Size')
 		hold off
 		if useStaircase == true
 			subplot(2,1,2)
@@ -605,13 +600,6 @@ end
 					staircaseB.slope(end) staircaseB.guess(end) ...
 					staircaseB.lapse(end)], rB);
 				plot(rB,outB,'r-');
-				
-				r = staircaseB.response;
-				t = staircaseB.threshold;
-				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'ro','MarkerFaceColor','w','MarkerSize',8);
 			end
 			if ~isempty(staircaseW.threshold)
 				rW = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
@@ -619,15 +607,8 @@ end
 					staircaseW.slope(end) staircaseW.guess(end) ...
 					staircaseW.lapse(end)], rW);
 				plot(rW,outW,'b-');
-				
-				r = staircaseW.response;
-				t = staircaseW.threshold;
-				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'bo','MarkerFaceColor','b','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'bo','MarkerFaceColor','w','MarkerSize',8);
 			end
-			box on; grid on; ylim([0 1]); xlim([0 1]);
+			box on; grid on; ylim([2.4 3.6]); xlim([0 1]);
 			xlabel('Luminance (red=BLACK blue=WHITE)');
 			ylabel('Responses');
 			hold off
@@ -638,24 +619,23 @@ end
 	function setupStairCase()
 		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack),grain);
 		priorAlphaW = linspace(min(pedestalWhite), max(pedestalWhite),grain);
-		priorBetaB = linspace(-5, 0, 30); %our slope
-		priorBetaW = linspace(0, 5, 30); %our slope
+		priorBeta = linspace(0.1, 20,grain); %our slope
 		priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter)
-		priorLambdaRange = 0.01; %ditto
+		priorLambdaRange = 0.02; %ditto
 		
 		staircaseB = PAL_AMPM_setupPM('stimRange',pedestalBlack,'PF',PF,...
-			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBetaB,...
+			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBeta,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
 		
 		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',PF,...
-			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBetaW,...
+			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBeta,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
 		
 		if usePriors
-			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.2,0.3).*PAL_pdfNormal(staircaseB.priorBetas,-3,5);
-			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.8,0.3).*PAL_pdfNormal(staircaseW.priorBetas,3,5);
+			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.5,0.3).*PAL_pdfNormal(staircaseB.priorBetas,2,10);
+			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.7,0.3).*PAL_pdfNormal(staircaseW.priorBetas,2,10);
 			figure;
 			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
@@ -692,14 +672,14 @@ end
 		md.pedestalBlack = pedestalBlack;
 		md.pedestalWhite = pedestalWhite;
 		md.sigma = sigma;
-		md.discSize = discSize;
+% 		md.discSize = discSize;
 		md.NOSEE = NOSEE;
-		md.YESBRIGHT = YESBRIGHT;
-		md.YESDARK = YESDARK;
+		md.YESRIGHT = YESRIGHT;
+		md.YESLEFT = YESLEFT;
 		md.UNSURE = UNSURE;
 		md.BREAKFIX = BREAKFIX;
-		md.XPos = XPos;
-		md.yPos = YPos;
+		md.XPos = XPos1;
+		md.yPos = YPos1;
 		
 		md.fixX = fixX;
 		md.fixY = fixY;

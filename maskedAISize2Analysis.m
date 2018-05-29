@@ -1,4 +1,4 @@
-function maskedAIContrastAnalysis(filename, st)
+function maskedAISize2Analysis(filename, st)
 
 if ~exist('filename','var')
 	filename = '';
@@ -13,9 +13,9 @@ end
 
 if ~exist('st','var')  || isempty(st)
 	st.useFixed = true;
-	st.pedestalRange = [0:0.05:0.3];
-	st.pedestalBlackLinear = 0.5 - fliplr(st.pedestalRange);
-	st.pedestalWhiteLinear = 0.5 + st.pedestalRange;
+	st.pedestalRange = 2.5:0.1:3.5;
+	st.pedestalBlackLinear = 2.5:0.1:3.5;
+	st.pedestalWhiteLinear = 2.5:0.1:3.5;
 	st.StimLevels					= st.pedestalRange;
 	st.StimLevelsFineGrain = linspace(min(st.StimLevels),max(st.StimLevels),200);
 	st.nTrials = 5;
@@ -195,7 +195,7 @@ disp(paramsValues0)
 fprintf(' message: %s\n',message.message);
 
 [paramsValues1, LL1, exitflag1, message] = PAL_PFML_Fit(st.StimLevels,NumPos1,OutOfNum1,searchGrid,paramsFree,PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'searchOptions',opts);
-fprintf('\n===EXIT: %i LL=%.2g -- Luminance WHITE Parameters: ',exitflag1,LL1)
+fprintf('\n===E XIT: %i LL=%.2g -- Luminance WHITE Parameters: ',exitflag1,LL1)
 disp(paramsValues1)
 fprintf(' message: %s\n',message.message);
 
