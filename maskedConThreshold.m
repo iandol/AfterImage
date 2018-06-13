@@ -295,7 +295,7 @@ try %our main experimental try catch loop
 			end
 			
             %=====================PEDESTAL
-			stimuli{1}.colourOut = pedestal;
+			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + ana.pedestalTime
 				draw(stimuli); %draw stimulus

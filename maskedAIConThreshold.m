@@ -32,9 +32,9 @@ cla(ana.plotAxis1);
 cla(ana.plotAxis2);
 cla(ana.plotAxis3);
 
-useEyelink = true;
+useEyeLink = ana.useEyelink;
 nBlocks = ana.nBlocks;
-nBlocksOverall = ana.nBlocks * length(ana.pedestalRange);
+nBlocksOverall = nBlocks * length(ana.pedestalRange);
 
 % pedestalRange = 0:0.02:0.4;
 if ana.useStaircase
@@ -61,7 +61,7 @@ saveMetaData();
 %======================================================stimulus objects
 %---------------------main disc (stimulus and pedestal).
 st = discStimulus();
-st.name = ['STIM_' nameExp];
+st.name = ['STIM_' ana.nameExp];
 st.xPosition = XPos(1);
 st.colour = [1 1 1 1];
 st.size = ana.discSize;
@@ -74,13 +74,12 @@ m.density = 1000;
 m.coherence = 0;
 m.size = st.size+1;
 m.speed=0.5;
-m.name = ['MASK_' nameExp];
+m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
 m.size = st.size;
-
 %----------combine them into a single meta stimulus------------------
 stimuli = metaStimulus();
-stimuli.name = nameExp;
+stimuli.name = ana.nameExp;
 
 sidx = 1;
 maskidx = 1;
@@ -112,7 +111,7 @@ if exist(ana.gammaTable, 'file')
 	end
 end
 sM.backgroundColour = ana.backgroundColor;
-sM.open; % OPEN THE SCREEN
+screenVals = sM.open; % OPEN THE SCREEN
 fprintf('\n--->>> AIContrast Opened Screen %i : %s\n', sM.win, sM.fullName);
 setup(stimuli,sM); %setup our stimulus object
 
@@ -198,7 +197,7 @@ try %our main experimental try catch loop
 		response = NaN;
 		stimuli.showMask = false;
 		colourOut = task.outValues{task.thisRun,1};
-		if useStaircase == true
+		if ana.useStaircase == true
 			if colourOut == 0
 				pedestal = 0.5-staircaseB.xCurrent;
 			else
@@ -295,7 +294,7 @@ try %our main experimental try catch loop
 			end
 			
 			%====================PEDESTAL
-			stimuli{1}.colourOut = pedestal;
+			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + ana.pedestalTime
 				draw(stimuli); %draw stimulus
@@ -467,7 +466,7 @@ end
 			responseInfo.whiteN = taskW.thisRun;
 			responseInfo.redo = responseRedo;
 			updateTask(task,response,tEnd,responseInfo)
-			if useStaircase == true
+			if ana.useStaircase == true
 				if colourOut == 0
 					if response == NOSEE 
 						yesnoresponse = 0;
@@ -483,6 +482,7 @@ end
 					end
 					staircaseW = PAL_AMPM_updatePM(staircaseW, yesnoresponse);
 				end
+				fprintf('subject response: %i | ', yesnoresponse)
 			else
 				if colourOut == 0
 					taskB.thisRun = taskB.thisRun + 1;
@@ -492,8 +492,7 @@ end
 			end
 		elseif response == -10
 			if task.totalRuns > 1
-				fprintf('Subject RESET of trial %i -- ', task.thisRun);
-				if useStaircase == true
+				if ana.useStaircase == true
 					warning('Not Implemented yet!!!')
 				else
 					if task.responseInfo(end) == 0
@@ -513,7 +512,7 @@ end
 
 	function doPlot()
 		ListenChar(0);
-		
+				
 		x = 1:length(task.response);
 		info = cell2mat(task.responseInfo);
 		ped = [info.pedestal];
@@ -522,13 +521,13 @@ end
 		idxB = [info.contrastOut] == 0;
 		
 		idxNO = task.response == NOSEE;
-		idxYESSEE = task.response == YESSEE;		
-		
+		idxYESSEE = task.response == YESSEE;
+
 		cla(ana.plotAxis1); line(ana.plotAxis1,[0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold(ana.plotAxis1,'on')
-		plot(ana.plotAxis1, x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
-		plot(ana.plotAxis1, x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
-		plot(ana.plotAxis1, x(idxYESSEE & idxB), ped(idxYESSEE & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
-		plot(ana.plotAxis1, x(idxYESSEE & idxW), ped(idxYESSEE & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESSEE & idxB), ped(idxYESSEE & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESSEE & idxW), ped(idxYESSEE & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
 
 		
 		if length(task.response) > 4
@@ -551,54 +550,56 @@ end
 			t = sprintf('TRIAL:%i', task.thisRun);
 			title(ana.plotAxis1, t);
 		end
-		box(ana.plotAxis1,'on'); grid(ana.plotAxis1,'on'); 
-		ylim(ana.plotAxis1,[0.1 0.9]); 
+		box(ana.plotAxis1,'on'); grid(ana.plotAxis1,'on');
+		ylim(ana.plotAxis1,[0.1 0.9]);
 		xlim(ana.plotAxis1,[0 max(x)+1]);
 		xlabel(ana.plotAxis1,'Trials (red=BLACK blue=WHITE)')
 		ylabel(ana.plotAxis1,'Stimulus Luminance')
 		hold(ana.plotAxis1,'off')
 		
-		if useStaircase == true
-			cla(ana.plotAxis2); hold(ana.plotAxis2, 'on');
+		if ana.useStaircase == true
+			cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
 			if ~isempty(staircaseB.threshold)
-				rB = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
-				outB = PF([staircaseB.threshold(end) ...
+				rB = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
+				outB = ana.PF([staircaseB.threshold(end) ...
 					staircaseB.slope(end) staircaseB.guess(end) ...
 					staircaseB.lapse(end)], rB);
-				plot(ana.plotAxis2, rB,outB,'r-');
+				plot(ana.plotAxis2,rB,outB,'r-','LineWidth',2);
 				
 				r = staircaseB.response;
 				t = staircaseB.x(1:length(r));
 				yes = r == 1;
 				no = r == 0; 
-				plot(ana.plotAxis2, t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',9);
-				plot(ana.plotAxis2, t(no), zeros(1,sum(no))+gammaVal,'ro','MarkerFaceColor','w','MarkerSize',9);
+				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',10);
+				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'ro','MarkerFaceColor','w','MarkerSize',10);
 			end
 			if ~isempty(staircaseW.threshold)
-				rW = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
-				outW = PF([staircaseW.threshold(end) ...
+				rW = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
+				outW = ana.PF([staircaseW.threshold(end) ...
 					staircaseW.slope(end) staircaseW.guess(end) ...
 					staircaseW.lapse(end)], rW);
-				plot(ana.plotAxis2, rW,outW,'b--');
+				plot(ana.plotAxis2,rW,outW,'b--','LineWidth',2);
 				
 				r = staircaseW.response;
 				t = staircaseW.x(1:length(r));
 				yes = r == 1;
-				no = r == 0; 
-				plot(ana.plotAxis2, t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
-				plot(ana.plotAxis2, t(no), zeros(1,sum(no))+ana.gamma,'bd','MarkerFaceColor','w','MarkerSize',8);
-			end
-			box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on'); 
-			ylim(ana.plotAxis2, [ana.gamma 1]); 
-			xlim(ana.plotAxis2, [0 0.5]);
-			xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
-			ylabel(ana.plotAxis2, 'Responses');
-			hold(ana.plotAxis2, 'off');
+				no = r == 0;
+				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
+				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'bd','MarkerFaceColor','w','MarkerSize',8);
+				end
+
+				box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
+				ylim(ana.plotAxis2, [ana.gamma 1]);
+				xlim(ana.plotAxis2, [0 0.4]);
+				xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
+				ylabel(ana.plotAxis2, 'Responses');
+				hold(ana.plotAxis2, 'off');
+			
 		end
 		drawnow;
 	end
 
-	function setupStairCase()
+function setupStairCase()
 		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack),grain);
 		priorAlphaW = linspace(min(pedestalWhite), max(pedestalWhite),grain);
 		priorBetaB = linspace(0, ana.betaMax, 40); %our slope
@@ -636,8 +637,7 @@ end
 		ana.values.pedestalBlack = pedestalBlack;
 		ana.values.pedestalWhite = pedestalWhite;
 		ana.values.NOSEE = NOSEE;
-		ana.values.YESBRIGHT = YESBRIGHT;
-		ana.values.YESDARK = YESDARK;
+	    ana.values.YESSEE = YESSEE;
 		ana.values.UNSURE = UNSURE;
 		ana.values.BREAKFIX = BREAKFIX;
 		ana.values.XPos = XPos;
