@@ -1,23 +1,34 @@
 function maskedAISize2()
 
+
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
 KbName('UnifyKeyNames');
 
 %------------Base Experiment settings--------------
-ans = inputdlg({'Subject Name','Comments (room, lights etc.)'});
-subject = ans{1};
+sinfo = inputdlg({'\bfSubject Name','Comments (\itroom, lights etc.)'},...
+	'Afterimage Contrast Matching',...
+	[1 50;5 50],{'Anon',''},struct('Resize','on','Interpreter','tex'));
+if isempty(sinfo);return;end
+subject = sinfo{1};
+comments = sinfo{2};
 lab = 'lab305_aristotle'; %which lab and machine?
-comments = ans{2};
 useStaircase = false;
 stimTime = 6;
 pedestalTime = 0.4;
 maskTime = 1.5;
 sigma = 2;
-pedestalRange = 2.5:0.1:3.5;
-nBlocks = 1;
-nBlocksOverall = nBlocks * length(pedestalRange);
+discSize = 2.5;
+nBlocks = 5;
+
 posloop = 1;
+if useStaircase == true
+	PF = @PAL_Gumbel;
+	pedestalRange = 0.8:0.02:1.2;
+else
+	pedestalRange = 2:0.1:3;
+end
+nBlocksOverall = nBlocks * length(pedestalRange);
 pedestalBlackLinear = pedestalRange;
 pedestalWhiteLinear = pedestalRange;
 pedestalBlack =  pedestalRange;
@@ -31,8 +42,8 @@ if strcmpi(lab,'lab305_aristotle')
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = true;
 	isDummy = false;
-	pixelsPerCm = 36; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 56.5; %64.5 in D-lab;
+	pixelsPerCm = 27; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
+	distance = 62.5; %64.5 in D-lab;
 	windowed = [];
 	useScreen = 1; %screen 2 in D-lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
@@ -42,8 +53,10 @@ end
 NOSEE = 1; 	YESRIGHT = 2; YESLEFT = 3; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
-XPos1 = [1.414 1.414 -1.414 -1.414];     XPos2 = -XPos1;
-YPos1 = [1.414 -1.414 -1.414 1.414];     YPos2 = -YPos1;
+XPos1 = [1.414 1.414 -1.414 -1.414];     
+YPos1 = [1.414 -1.414 -1.414 1.414];     
+XPos2 = [-1.414 -1.414 1.414 1.414];    
+YPos2 = [1.414 -1.414 -1.414 1.414];    
 %----------------eyetracker settings-------------------------
 fixX = 0;
 fixY = 0;
@@ -65,14 +78,14 @@ st1 = discStimulus();  % white stimulus
 st1.name = ['STIM1_' nameExp];
 st1.xPosition = -3;
 st1.colour = [1 1 1 1];
-st1.size = 3;
+st1.size = discSize;
 st1.sigma = sigma;
 
 st2 = discStimulus();   % black stimulus
 st2.name = ['STIM2_' nameExp];
 st2.xPosition = 3;
 st2.colour = [0 0 0 1];
-st2.size = 3;
+st2.size = discSize;
 st2.sigma = sigma;
 %-----mask stimulus
 m = dotsStimulus();
@@ -208,19 +221,25 @@ try %our main experimental try catch loop
 		colourOut = task.outValues{task.thisRun,1};
 		if useStaircase == true
 			if colourOut == 0
-				pedestal = staircaseB.xCurrent;
+				pedestal = staircaseB.xCurrent*discSize;
+				stimuli{1}.sizeOut = pedestal;
+				stimuli{2}.sizeOut = discSize;
+				if posloop == 1 || posloop == 3; posloop = 2; else posloop = 1; end
 			else
-				pedestal = staircaseW.xCurrent;
+				pedestal = discSize*staircaseW.xCurrent;
+				 stimuli{1}.sizeOut = discSize;
+				 stimuli{2}.sizeOut = pedestal;  
+				if posloop == 1 || posloop == 3; posloop = 4; else posloop = 3; end
 			end
 		else
 			if colourOut == 0
 				pedestal = taskB.outValues{taskB.thisRun,1};
 				stimuli{1}.sizeOut = pedestal;
-				stimuli{2}.sizeOut = 3;
+				stimuli{2}.sizeOut = discSize;
 				if posloop == 1 || posloop == 3; posloop = 2; else posloop = 1; end
             else
 			    pedestal = taskW.outValues{taskW.thisRun,1};% Xu 20150515
-				 stimuli{1}.sizeOut = 3;
+				 stimuli{1}.sizeOut = discSize;
 				 stimuli{2}.sizeOut = pedestal;  
 				if posloop == 1 || posloop == 3; posloop = 4; else posloop = 3; end
 			end
@@ -338,7 +357,7 @@ try %our main experimental try catch loop
 			end
 			
 			drawBackground(sM);
-			Screen('DrawText',sM.win,['See anything AFTER stimulus: [LEFT]=NO [UP]=BRIGHTER [DOWN]=DARKER [RIGHT]=SHOW AGAIN'],0,0);
+			Screen('DrawText',sM.win,['Which is bigger: [LEFT]=Left [RIGHT]=SHOW AGAIN [UP]=Same [DOWN]=unsure '],0,0);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
@@ -587,7 +606,7 @@ end
 			t = sprintf('TRIAL:%i', task.thisRun);
 			title(t);
 		end
-		box on; grid on; ylim([2.4 3.6]); xlim([0 max(x)+1]);
+		box on; grid on; ylim([2 3]); xlim([0 max(x)+1]);
 		xlabel('Trials (red=BLACK blue=WHITE)')
 		ylabel('Pedestal Size')
 		hold off
@@ -595,21 +614,35 @@ end
 			subplot(2,1,2)
 			cla; hold on;
 			if ~isempty(staircaseB.threshold)
-				rB = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
+				rB = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
 				outB = PF([staircaseB.threshold(end) ...
 					staircaseB.slope(end) staircaseB.guess(end) ...
 					staircaseB.lapse(end)], rB);
 				plot(rB,outB,'r-');
+				
+				r = staircaseB.response;
+				t = staircaseB.threshold;
+				yes = r == 1;
+				no = r == 1; 
+				plot(t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',8);
+				plot(t(no), zeros(1,sum(no)),'ro','MarkerFaceColor','w','MarkerSize',8);
 			end
 			if ~isempty(staircaseW.threshold)
-				rW = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
+				rW = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
 				outW = PF([staircaseW.threshold(end) ...
 					staircaseW.slope(end) staircaseW.guess(end) ...
 					staircaseW.lapse(end)], rW);
 				plot(rW,outW,'b-');
+				
+				r = staircaseW.response;
+				t = staircaseW.threshold;
+				yes = r == 1;
+				no = r == 1; 
+				plot(t(yes), ones(1,sum(yes)),'bo','MarkerFaceColor','b','MarkerSize',8);
+				plot(t(no), zeros(1,sum(no)),'bo','MarkerFaceColor','w','MarkerSize',8);
 			end
-			box on; grid on; ylim([2.4 3.6]); xlim([0 1]);
-			xlabel('Luminance (red=BLACK blue=WHITE)');
+			box on; grid on; ylim([0 1]); xlim([0.8 1.2]);
+			xlabel('Size (red=BLACK blue=WHITE)');
 			ylabel('Responses');
 			hold off
 		end
@@ -617,33 +650,35 @@ end
 	end
 
 	function setupStairCase()
-		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack),grain);
-		priorAlphaW = linspace(min(pedestalWhite), max(pedestalWhite),grain);
-		priorBeta = linspace(0.1, 20,grain); %our slope
+		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack), grain);
+		priorAlphaW = linspace(min(pedestalWhite), max(pedestalBlack), grain);
+		priorBetaB = linspace(0, 8, 40); %our slope
+		priorBetaW = linspace(0, 8, 40); %our slope
 		priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter)
-		priorLambdaRange = 0.02; %ditto
+		priorLambdaRange = 0.01; %ditto
 		
 		staircaseB = PAL_AMPM_setupPM('stimRange',pedestalBlack,'PF',PF,...
-			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBeta,...
+			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBetaB,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
 		
 		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',PF,...
-			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBeta,...
+			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBetaW,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
 			'numTrials', stopRule,'marginalize','lapse');
 		
-		if usePriors
-			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.5,0.3).*PAL_pdfNormal(staircaseB.priorBetas,2,10);
-			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.7,0.3).*PAL_pdfNormal(staircaseW.priorBetas,2,10);
+		
+			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.8,1.2).*PAL_pdfNormal(staircaseB.priorBetas,3,8);
+			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.8,1.2).*PAL_pdfNormal(staircaseW.priorBetas,3,8);
 			figure;
 			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
 			subplot(1,2,2);imagesc(staircaseW.priorBetaRange,staircaseW.priorAlphaRange,priorW); axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors WHITE')
-			staircaseB = PAL_AMPM_setupPM(staircaseB,'prior',priorB);
-			staircaseW = PAL_AMPM_setupPM(staircaseW,'prior',priorW);
-		end
+			if usePriors
+				staircaseB = PAL_AMPM_setupPM(staircaseB,'prior',priorB);
+				staircaseW = PAL_AMPM_setupPM(staircaseW,'prior',priorW);
+			end
 	end
 
 	function md = saveMetaData()

@@ -10,42 +10,43 @@ sinfo = inputdlg({'\bfSubject Name','Comments (\itroom, lights etc.)'},...
 	[1 50;5 50],{'Anon',''},struct('Resize','on','Interpreter','tex'));
 if isempty(sinfo);return;end
 subject = sinfo{1};
+
 comments = sinfo{2};
 lab = 'lab305_aristotle'; %which lab and machine?
 useStaircase = true;
 stimTime = 0.4;
 pedestalTime = 0;
-maskTime = 1;
-sigma = 3;
+maskTime = 1.5;
+sigma = 10;
 discSize = 3;
-if useStaircase == true
-	PF = @PAL_Gumbel;
-	pedestalRange = 0:0.003:0.09;
-else
-	pedestalRange = 0:0.003:0.09; % pedestalRange here is the stimulus contrast 
-end
-nBlocks = 2;
-nBlocksOverall = nBlocks * length(pedestalRange);
+nBlocks = 4;
 
 if strcmpi(lab,'lab305_aristotle')
-	calibrationFile=load('AOCat60Hz_COLOR.mat');
+	calibrationFile=[];%load('AOCat60Hz_COLOR.mat');
 	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
 		calibrationFile = calibrationFile.c;
 	end
 	backgroundColour = [0.5 0.5 0.5];
 	useEyeLink = true;
 	isDummy = false;
-	pixelsPerCm = 36; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 56.5; %64.5 in D-lab;
+	pixelsPerCm = 27; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
+	distance = 62.5; %64.5 in D-lab;
 	windowed = [];
 	useScreen = 1; %screen 2 in D-lab is CRT
 	eyelinkIP = []; %keep it empty to force the default
 	if useStaircase
+		PF = @PAL_Gumbel;
+		slopeMax = 200;
+		gammaVal = 0.5;
+		lambdaVal = 0.01;
+		marginalize = [2];
+		pedestalRange = 0:0.003:0.09;
 		pedestalBlack = pedestalRange;
 		pedestalBlackLinear = pedestalBlack;
 		pedestalWhite = pedestalRange;
 		pedestalWhiteLinear = pedestalWhite;
 	else
+		pedestalRange = 0:0.003:0.09; % pedestalRange here is the stimulus contrast 
 		pedestalBlack = 0.5 - pedestalRange;
 		pedestalBlackLinear = pedestalBlack;
 		pedestalWhite = 0.5 + pedestalRange;
@@ -69,6 +70,7 @@ elseif strcmpi(lab,'lab214_aristotle')
 	pedestalBlack =  pedestalBlackLinear;
 	pedestalWhite = pedestalWhiteLinear;
 end
+nBlocksOverall = nBlocks * length(pedestalRange);
 
 %-------------------response values, linked to left, up, down
 NOSEE = 1; 	YESSEE = 2; UNSURE = 4; BREAKFIX = -1;
@@ -82,7 +84,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 1;
 firstFixTime = 0.5;
-firstFixDiameter = 1.5;
+firstFixDiameter = 2;
 strictFixation = true;
 
 %----------------Make a name for this run-----------------------
@@ -129,8 +131,8 @@ sM = screenManager('verbose',false,'blend',true,'screen',useScreen,...
 	'distance',distance,'bitDepth','FloatingPoint32BitIfPossible',...
 	'debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-	'windowed',windowed,'backgroundColour',[backgroundColour 0],...
-	'gammaTable', calibrationFile); %use a temporary screenManager object
+	'windowed',windowed,'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+if ~isempty(calibrationFile); sM.gammaTable = calibrationFile; end
 screenVals = open(sM); %open PTB screen
 setup(stimuli,sM); %setup our stimulus object
 
@@ -179,6 +181,8 @@ if useStaircase == false
 	taskW.nVar(1).stimulus = 1;
 	taskW.nVar(1).values = pedestalWhite;
 	randomiseStimuli(taskW);
+	
+	aaaaa
 	initialiseTask(taskW);
 	
 	taskB = stimulusSequence();
@@ -194,7 +198,7 @@ else
 	stopCriterion = 'trials';
 	trials = 40;
 	stopRule = 40;
-	usePriors = true;
+	usePriors = false;
 	grain = 100;
 	setupStairCase();
 end
@@ -226,7 +230,6 @@ try %our main experimental try catch loop
 		response = NaN;
 		stimuli.showMask = false;
 		colourOut = task.outValues{task.thisRun,1};
-		stimuli{1}.colourOut = colourOut;
 		if useStaircase == true
 			if colourOut == 0
 				pedestal = 0.5-staircaseB.xCurrent;
@@ -269,10 +272,10 @@ try %our main experimental try catch loop
 			trackerDrawFixation(eL); %draw fixation window on eyelink computer
 			trackerDrawStimuli(eL,ts);
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
-				edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
-				edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
-				edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
-				startRecording(eL);
+			edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
+			edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+			edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
+			startRecording(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
 			syncTime(eL);
@@ -591,7 +594,8 @@ end
 		hold off
 		if useStaircase == true
 			subplot(2,1,2)
-			cla; hold on;
+			cla;
+			hold on;
 			if ~isempty(staircaseB.threshold)
 				rB = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
 				outB = PF([staircaseB.threshold(end) ...
@@ -600,11 +604,11 @@ end
 				plot(rB,outB,'r-');
 				
 				r = staircaseB.response;
-				t = staircaseB.threshold;
+				t = staircaseB.x(1:length(r));
 				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'ro','MarkerFaceColor','w','MarkerSize',8);
+				no = r == 0; 
+				plot(t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',9);
+				plot(t(no), zeros(1,sum(no))+gammaVal,'ro','MarkerFaceColor','w','MarkerSize',9);
 			end
 			if ~isempty(staircaseW.threshold)
 				rW = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
@@ -614,13 +618,13 @@ end
 				plot(rW,outW,'b-');
 				
 				r = staircaseW.response;
-				t = staircaseW.threshold;
+				t = staircaseW.x(1:length(r));
 				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'bo','MarkerFaceColor','b','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'bo','MarkerFaceColor','w','MarkerSize',8);
+				no = r == 0; 
+				plot(t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
+				plot(t(no), zeros(1,sum(no))+gammaVal,'kd','MarkerFaceColor','w','MarkerSize',8);
 			end
-			box on; grid on; ylim([0 1]); xlim([0 0.2]);
+			box on; grid on; ylim([gammaVal 1]); xlim([0 0.1]);
 			xlabel('Contrast (red=BLACK blue=WHITE)');
 			ylabel('Responses');
 			hold off
@@ -631,24 +635,24 @@ end
 	function setupStairCase()
 		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack),grain);
 		priorAlphaW = linspace(min(pedestalWhite), max(pedestalWhite),grain);
-		priorBetaB = linspace(0, 5, 30); %our slope
-		priorBetaW = linspace(0, 5, 30); %our slope
-		priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter)
-		priorLambdaRange = 0.01; %ditto
+		priorBetaB = linspace(0, slopeMax, 50); %our slope
+		priorBetaW = linspace(0, slopeMax, 50); %our slope
+		priorGammaRange = gammaVal;  %fixed value (using vector here would make it a free parameter)
+		priorLambdaRange = lambdaVal; %ditto
 		
 		staircaseB = PAL_AMPM_setupPM('stimRange',pedestalBlack,'PF',PF,...
 			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBetaB,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-			'numTrials', stopRule,'marginalize','lapse');
-		staircaseB.xCurrent=0.4;
+			'numTrials', stopRule,'marginalize',marginalize);
+% 		staircaseB.xCurrent=0.4;
 		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',PF,...
 			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBetaW,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-			'numTrials', stopRule,'marginalize','lapse');
+			'numTrials', stopRule,'marginalize',marginalize);
 		
 		if usePriors
-			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.8,0.3).*PAL_pdfNormal(staircaseB.priorBetas,3,5);
-			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.8,0.3).*PAL_pdfNormal(staircaseW.priorBetas,3,5);
+			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.3,0.05).*PAL_pdfNormal(staircaseB.priorBetas,3,8);
+			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.3,0.05).*PAL_pdfNormal(staircaseW.priorBetas,3,8);
 			figure;
 			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
