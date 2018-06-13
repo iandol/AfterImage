@@ -495,7 +495,6 @@ end
 			end
 		elseif response == -10
 			if task.totalRuns > 1
-				q
 				if ana.useStaircase == true
 					warning('Not Implemented yet!!!')
 				else

@@ -36,19 +36,18 @@ useEyelink = true;
 nBlocks = ana.nBlocks;
 nBlocksOverall = ana.nBlocks * length(ana.pedestalRange);
 
-useStaircase = true;
-stimTime = 6;
-pedestalTime = 0.4;
-maskTime = 1.5;
-sigma = 10;
-discSize = 3;
-if useStaircase == true
-	pedestalRange = 0:0.02:0.4;
+% pedestalRange = 0:0.02:0.4;
+if ana.useStaircase
+	pedestalBlack = ana.pedestalRange;
+	pedestalBlackLinear = pedestalBlack;
+	pedestalWhite = ana.pedestalRange;
+	pedestalWhiteLinear = pedestalWhite;
 else
-	pedestalRange = 0:0.02:0.4; % pedestalRange here is the stimulus contrast 
+	pedestalBlack = 0.5 - fliplr(ana.pedestalRange);
+	pedestalBlackLinear = pedestalBlack;
+	pedestalWhite = 0.5 + ana.pedestalRange;
+	pedestalWhiteLinear = pedestalWhite;
 end
-nBlocks = 2;
-nBlocksOverall = nBlocks * length(pedestalRange);
 
 %-------------------response values, linked to left, up, down
 NOSEE = 1; 	YESSEE = 2; UNSURE = 4; BREAKFIX = -1;
@@ -129,7 +128,6 @@ if useEyeLink == true
 	eL.sampleRate = ana.sampleRate;
 	eL.remoteCalibration = false; % manual calibration?
 	eL.calibrationStyle = ana.calibrationStyle; % calibration style
-	eL.exclusionZone = ana.exclusionZone;
 	eL.modify.calibrationtargetcolour = [1 1 1];
 	eL.modify.calibrationtargetsize = 1;
 	eL.modify.calibrationtargetwidth = 0.05;
@@ -148,7 +146,7 @@ end
 
 %---------------------------Set up task variables----------------------
 task = stimulusSequence();
-task.name = nameExp;
+task.name = ana.nameExp;
 task.nBlocks = nBlocksOverall;
 task.nVar(1).name = 'colour';
 task.nVar(1).stimulus = 1;
@@ -156,10 +154,10 @@ task.nVar(1).values = [0 1];
 randomiseStimuli(task);
 initialiseTask(task);
 
-if useStaircase == false
+if ana.useStaircase == false
 	staircaseB = []; staircaseW = [];
 	taskW = stimulusSequence();
-	taskW.name = nameExp;
+	taskW.name = ana.nameExp;
 	taskW.nBlocks = nBlocks;
 	taskW.nVar(1).name = 'pedestalWhite';
 	taskW.nVar(1).stimulus = 1;
@@ -168,7 +166,7 @@ if useStaircase == false
 	initialiseTask(taskW);
 	
 	taskB = stimulusSequence();
-	taskB.name = nameExp;
+	taskB.name = ana.nameExp;
 	taskB.nBlocks = nBlocks;
 	taskB.nVar(1).name = 'pedestalBlack';
 	taskB.nVar(1).stimulus = 1;
@@ -200,7 +198,6 @@ try %our main experimental try catch loop
 		response = NaN;
 		stimuli.showMask = false;
 		colourOut = task.outValues{task.thisRun,1};
-		stimuli{1}.colourOut = colourOut;
 		if useStaircase == true
 			if colourOut == 0
 				pedestal = 0.5-staircaseB.xCurrent;
@@ -256,7 +253,10 @@ try %our main experimental try catch loop
 				getSample(eL);
 				fixated=testSearchHoldFixation(eL,'fix','breakfix');
 			end
-			if strcmpi(fixated,'breakfix'); response = BREAKFIX; end
+			if strcmpi(fixated,'breakfix')
+				fprintf(' BREAK INIT FIXATION');
+				response = BREAKFIX;
+			end
 		else
 			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 			tFix = Screen('Flip',sM.win); %flip the buffer
@@ -265,12 +265,14 @@ try %our main experimental try catch loop
 		end
 		
 		%------Our main stimulus drawing loop
-		while strcmpi(fixated,'fix') %initial fixation held
+		finishLoop = false;
+		while strcmp(fixated, 'fix') && finishLoop == false
 			if useEyeLink; edfMessage(eL,'END_FIX'); statusMessage(eL,'Show Stimulus...'); end
+			
+			%=====================STIMULUS
 			stimuli.show();
-			tStim = GetSecs;
-			vbl = tStim;
-			while vbl <= tStim + ana.stimTime
+			tStim = GetSecs;  vbl = tStim;
+			while vbl <= tStim + ana.stimulusTime
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -285,13 +287,15 @@ try %our main experimental try catch loop
 				animate(stimuli); %animate stimulus, will be seen on next draw
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
 			end
-			if ~strcmpi(fixated,'fix')
-				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
-				continue
+			if useEyeLink && ~strcmpi(fixated,'fix')
+				response = BREAKFIX; finishLoop = true;
+				statusMessage(eL,'Subject Broke Fixation!');
+				edfMessage(eL,'MSG:BreakFix')
+				break
 			end
 			
 			%====================PEDESTAL
-			stimuli{1}.colourOut = 0.5;
+			stimuli{1}.colourOut = pedestal;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + ana.pedestalTime
 				draw(stimuli); %draw stimulus
@@ -309,8 +313,10 @@ try %our main experimental try catch loop
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
 			end
 			if ~strcmpi(fixated,'fix')
-				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
-				continue
+				response = BREAKFIX; finishLoop = true;
+				statusMessage(eL,'Subject Broke Fixation!');
+				edfMessage(eL,'MSG:BreakFix')
+				break
 			end
 			
 			%=====================MASK
@@ -327,25 +333,26 @@ try %our main experimental try catch loop
 			%=====================RESPONSE
 			drawBackground(sM);
 			Screen('DrawText',sM.win,['See anything: [LEFT]=YES  [RIGHT]=NO  [DOWN]=UNSURE'],0,0);
+			tMaskOff = Screen('Flip',sM.win);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
 				edfMessage(eL,'END_RT'); ...
 			end
-		tMaskOff = Screen('Flip',sM.win);
+		    finishLoop = true;
+		end
+		
 		
 		%-----check keyboard
-		%timeout = GetSecs+5;
-		breakloopkey = false;
-		ListenChar(2);
-		while ~breakloopkey
-			[keyIsDown, ~, keyCode] = KbCheck(-1);
-			if keyIsDown == 1
-				rchar = KbName(keyCode);
+		if response ~= BREAKFIX
+			ListenChar(2);
+			[secs, keyCode] = KbWait(-1);
+			rchar = KbName(keyCode);
+% 		while ~breakloopkey			
+% 			if keyIsDown == 1
 				if iscell(rchar);rchar=rchar{1};end
 				switch lower(rchar)
 					case {'leftarrow','left'}
-						breakloopkey = true; fixated = 'no';
 						response = YESSEE;
 						updateResponse();
 						if useEyeLink
@@ -354,7 +361,6 @@ try %our main experimental try catch loop
 						end
 						doPlot();
 					case {'downarrow','down'} %darker than
-						breakloopkey = true; fixated = 'no';
 						response = UNSURE;
 						updateResponse();
 						if useEyeLink
@@ -363,7 +369,6 @@ try %our main experimental try catch loop
 						end
 						doPlot();
 					case {'rightarrow','right'}
-						breakloopkey = true; fixated = 'no';
 						response = NOSEE;
 						updateResponse();
 						if useEyeLink
@@ -372,7 +377,6 @@ try %our main experimental try catch loop
 						end
 						doPlot();
 					case {'backspace','delete'}
-						breakloopkey = true; fixated = 'no';
 						response = -10;
 						updateResponse();
 						if useEyeLink
@@ -382,25 +386,21 @@ try %our main experimental try catch loop
 						doPlot();
 					case {'c'} %calibrate
 						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
 						stopRecording(eL);
 						setOffline(eL);
 						trackerSetup(eL);
 						WaitSecs(2);
 					case {'d'}
 						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
 						stopRecording(eL);
 						setOffline(eL);
 						success = driftCorrection(eL);
 						WaitSecs(2);
 					case {'q'} %quit
 						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
 						fprintf('\n!!!QUIT!!!\n');
 						breakloop = true;
 					otherwise
-						breakloopkey = true; fixated = 'no';
 						response = UNSURE;
 						updateResponse();
 						if useEyeLink
@@ -408,12 +408,11 @@ try %our main experimental try catch loop
 							edfMessage(eL,'Subject UNSURE')
 						end
 				end
-			end
-			%if timeout<=GetSecs; breakloopkey = true; end
 		end
+			
 		tEnd = GetSecs;
 		ListenChar(0);
-		end
+		
 		resetFixation(eL); trackerClearScreen(eL);
 		stopRecording(eL);
 		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);
@@ -429,13 +428,11 @@ try %our main experimental try catch loop
 	p=uigetdir(pwd,'Select Directory to Save Data, CANCEL to not save.');
 	if ischar(p)
 		cd(p);
-		md = saveMetaData();
 		response = task.response;
 		responseInfo = task.responseInfo;
-		save([nameExp '.mat'], 'response', 'responseInfo', 'task',...
-			'taskB', 'taskW', 'staircaseB', 'staircaseW', 'md', 'sM',...
+		save([ana.nameExp '.mat'], 'ana', 'response', 'responseInfo', 'task',...
+			'taskB', 'taskW', 'staircaseB', 'staircaseW', 'sM',...
 			'stimuli', 'eL');
-		if ishandle(figH); saveas(figH, [nameExp '.fig']); end
 		disp(['=====SAVE, saved current data to: ' pwd]);
 	else
 		eL.saveFile = ''; %blank save file so it doesn't save
@@ -447,10 +444,8 @@ catch ME
 	close(sM); %close screen
 	Priority(0); ListenChar(0); ShowCursor;
 	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
-	md = saveMetaData();
-	save([nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
-		'staircaseB', 'staircaseW', 'md', 'sM', 'stimuli', 'eL', 'ME')
-	if ishandle(figH); saveas(figH, [nameExp 'CRASH.fig']); end
+	save([ana.nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
+		'staircaseB', 'staircaseW', 'ana', 'sM', 'stimuli', 'eL', 'ME')
 	ple(ME)
 	if useEyeLink == true; eL.saveFile = [nameExp 'CRASH.edf']; close(eL); end
 	reset(stimuli);
