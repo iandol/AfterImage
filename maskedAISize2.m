@@ -1,53 +1,51 @@
 function maskedAISize2()
 
-
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
 KbName('UnifyKeyNames');
 
 %------------Base Experiment settings--------------
-sinfo = inputdlg({'\bfSubject Name','Comments (\itroom, lights etc.)'},...
-	'Afterimage Contrast Matching',...
-	[1 50;5 50],{'Anon',''},struct('Resize','on','Interpreter','tex'));
-if isempty(sinfo);return;end
-subject = sinfo{1};
-comments = sinfo{2};
-lab = 'lab305_aristotle'; %which lab and machine?
-useStaircase = false;
-stimTime = 6;
-pedestalTime = 0.4;
-maskTime = 1.5;
-sigma = 2;
-discSize = 2.5;
-nBlocks = 5;
+ana.date = datestr(datetime);
+ana.version = Screen('Version');
+ana.computer = Screen('Computer');
 
-posloop = 1;
-if useStaircase == true
-	PF = @PAL_Gumbel;
-	pedestalRange = 0.8:0.02:1.2;
+%===================experiment parameters===================
+if ana.debug
+	ana.screenID = 0;
 else
-	pedestalRange = 2:0.1:3;
+	ana.screenID = max(Screen('Screens'));%-1;
 end
+
+%===================Make a name for this run===================
+cd(ana.ResultDir)
+if ana.useStaircase; type = 'AISTAIR'; else type = 'AIMOC'; end %#ok<*UNRCH>
+if ~isempty(ana.subject)
+	nameExp = [type '_' ana.subject];
+	c = sprintf(' %i',fix(clock()));
+	nameExp = [nameExp c];
+	ana.nameExp = regexprep(nameExp,' ','_');
+else
+	ana.nameExp = 'debug';
+end
+
+cla(ana.plotAxis1);
+cla(ana.plotAxis2);
+cla(ana.plotAxis3);
+
+useEyeLink = ana.useEyelink;
+nBlocks = ana.nBlocks;
+nBlocksOverall = nBlocks * length(ana.pedestalRange);
+
+
+% pedestalRange = 0.8:0.02:1.2;
 nBlocksOverall = nBlocks * length(pedestalRange);
 pedestalBlackLinear = pedestalRange;
 pedestalWhiteLinear = pedestalRange;
 pedestalBlack =  pedestalRange;
 pedestalWhite = pedestalRange;  % by Xu20180515
 
-if strcmpi(lab,'lab305_aristotle')
-	calibrationFile=load('AOCat60Hz_COLOR.mat');
-	if isstruct(calibrationFile) %older matlab version bug wraps object in a structure
-		calibrationFile = calibrationFile.c;
-	end
-	backgroundColour = [0.5 0.5 0.5];
-	useEyeLink = true;
-	isDummy = false;
-	pixelsPerCm = 27; %26 for D-lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-	distance = 62.5; %64.5 in D-lab;
-	windowed = [];
-	useScreen = 1; %screen 2 in D-lab is CRT
-	eyelinkIP = []; %keep it empty to force the default
-end
+
+
 
 %-------------------response values, linked to left, up, down
 NOSEE = 1; 	YESRIGHT = 2; YESLEFT = 3; UNSURE = 4; BREAKFIX = -1;
@@ -56,46 +54,36 @@ NOSEE = 1; 	YESRIGHT = 2; YESLEFT = 3; UNSURE = 4; BREAKFIX = -1;
 XPos1 = [1.414 1.414 -1.414 -1.414];     
 YPos1 = [1.414 -1.414 -1.414 1.414];     
 XPos2 = [-1.414 -1.414 1.414 1.414];    
-YPos2 = [1.414 -1.414 -1.414 1.414];    
-%----------------eyetracker settings-------------------------
-fixX = 0;
-fixY = 0;
-firstFixInit = 1;
-firstFixTime = 0.5;
-firstFixDiameter = 3;
-strictFixation = true;
+YPos2 = [1.414 -1.414 -1.414 1.414];
 
-%----------------Make a name for this run-----------------------
-if useStaircase; type = 'STAIR'; else type = 'MOC'; end %#ok<*UNRCH>
-nameExp = ['AI' type '_' subject];
-c = sprintf(' %i',fix(clock()));
-c = regexprep(c,' ','_');
-nameExp = [nameExp c];
+saveMetaData();
 
 %======================================================stimulus objects
 %---------------------main disc (stimulus and pedestal).
 st1 = discStimulus();  % white stimulus
-st1.name = ['STIM1_' nameExp];
-st1.xPosition = -3;
+st1.name = ['STIM_' ana.nameExp];
+st1.xPosition = XPos1(1);
 st1.colour = [1 1 1 1];
-st1.size = discSize;
-st1.sigma = sigma;
+st1.size = ana.discSize;
+st1.sigma = ana.sigma;
 
 st2 = discStimulus();   % black stimulus
-st2.name = ['STIM2_' nameExp];
-st2.xPosition = 3;
+st2.name = ['STIM_' ana.nameExp];
+st2.xPosition = XPos2(1);
 st2.colour = [0 0 0 1];
-st2.size = discSize;
-st2.sigma = sigma;
+st2.size = ana.discSize;
+st2.sigma = ana.sigma;
+
 %-----mask stimulus
 m = dotsStimulus();
 m.mask = true;
 m.density = 1000;
 m.coherence = 0;
-m.size = 8;
+m.size = 10;
 m.speed=0.5;
-m.name = ['MASK_' nameExp];
-m.xPosition = 0;
+m.name = ['MASK_' ana.nameExp];
+m.xPosition = st.xPosition;
+m.size = st.size;
 
 %----------combine them into a single meta stimulus------------------
 %% --combine them into a single meta stimulus------------------
@@ -103,88 +91,104 @@ m1 =m; m1.xPosition = 0;
 m2 =m; m2.xPosition = 0;
 
 stimuli = metaStimulus();
-stimuli.name = nameExp;
+stimuli.name = ana.nameExp;
 stimuli.maskStimuli{1} = m1;
 stimuli.maskStimuli{2} = m2;
-stimuli.showMask = false;
 stimuli{1} = st1;
 stimuli{2} = st2;
+stimuli.showMask = false;
 
 %======================================================stimulus objects
 
 %-----------------------open the PTB screens------------------------
-sM = screenManager('verbose',false,'blend',true,'screen',useScreen,...
-	'pixelsPerCm',pixelsPerCm,...
-	'distance',distance,'bitDepth','FloatingPoint32BitIfPossible',...
-	'debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
-	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-	'windowed',windowed,'backgroundColour',[backgroundColour 0],...
-	'gammaTable', calibrationFile); 
-screenVals = open(sM); %open PTB screen
+PsychDefaultSetup(2);
+Screen('Preference', 'SkipSyncTests', 0);
+%===================open our screen====================
+sM = screenManager();
+sM.screen = ana.screenID;
+sM.windowed = ana.windowed;
+sM.pixelsPerCm = ana.pixelsPerCm;
+sM.distance = ana.distance;
+sM.debug = ana.debug;
+sM.blend = true;
+sM.bitDepth = 'FloatingPoint32Bit';
+if exist(ana.gammaTable, 'file')
+	load(ana.gammaTable);
+	if isa(c,'calibrateLuminance')
+		sM.gammaTable = c;
+	end
+	clear c;
+	if ana.debug
+		sM.gammaTable.plot
+	end
+end
+sM.backgroundColour = ana.backgroundColor;
+screenVals = sM.open; % OPEN THE SCREEN
+fprintf('\n--->>> AIContrast Opened Screen %i : %s\n', sM.win, sM.fullName);
 setup(stimuli,sM); %setup our stimulus object
 
-%---------------------setup eyelink---------------------------
+%==============================setup eyelink==========================
 if useEyeLink == true
-	eL = eyelinkManager('IP',eyelinkIP);
-	%eL.verbose = true;
-	eL.isDummy = isDummy; %use dummy or real eyelink?
-	eL.name = nameExp;
-	eL.saveFile = [nameExp '.edf'];
+	ana.strictFixation = true;
+	eL = eyelinkManager('IP',[]);
+	fprintf('--->>> eL setup starting: %s\n', eL.fullName);
+	eL.isDummy = ana.isDummy; %use dummy or real eyelink?
+	eL.name = ana.nameExp;
+	eL.saveFile = [ana.nameExp '.edf'];
 	eL.recordData = true; %save EDF file
-	eL.sampleRate = 250;
+	eL.sampleRate = ana.sampleRate;
 	eL.remoteCalibration = false; % manual calibration?
-	eL.calibrationStyle = 'HV5'; % calibration style
-	eL.modify.calibrationtargetcolour = [1 1 0];
-	eL.modify.calibrationtargetsize = 0.5;
-	eL.modify.calibrationtargetwidth = 0.01;
+	eL.calibrationStyle = ana.calibrationStyle; % calibration style
+	eL.modify.calibrationtargetcolour = [1 1 1];
+	eL.modify.calibrationtargetsize = 1;
+	eL.modify.calibrationtargetwidth = 0.05;
 	eL.modify.waitformodereadytime = 500;
 	eL.modify.devicenumber = -1; % -1 = use any keyboard
 	% X, Y, FixInitTime, FixTime, Radius, StrictFix
-	updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixDiameter, strictFixation);
-	initialise(eL, sM);
-	setup(eL);
-	Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-	Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
-	Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-	Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
+	updateFixationValues(eL, ana.fixX, ana.fixY, ana.firstFixInit,...
+		ana.firstFixTime, ana.firstFixDiameter, ana.strictFixation);
+	%sM.verbose = true; eL.verbose = true; sM.verbosityLevel = 10; eL.verbosityLevel = 4; %force lots of log output
+	initialise(eL, sM); %use sM to pass screen values to eyelink
+	setup(eL); % do setup and calibration
+	fprintf('--->>> eL setup complete: %s\n', eL.fullName);
+	WaitSecs('YieldSecs',0.5);
+	getSample(eL); %make sure everything is in memory etc.
 end
 
 
 %---------------------------Set up task variables----------------------
 task = stimulusSequence();
-task.name = nameExp;
+task.name = ana.nameExp;
 task.nBlocks = nBlocksOverall;
 task.nVar(1).name = 'colour';
-task.nVar(1).stimulus = [1];
+task.nVar(1).stimulus = 1;
 task.nVar(1).values = [0 1];
 randomiseStimuli(task);
 initialiseTask(task);
 
-if useStaircase == false
+if ana.useStaircase == false
 	staircaseB = []; staircaseW = [];
 	taskW = stimulusSequence();
-	taskW.name = nameExp;
+	taskW.name = ana.nameExp;
 	taskW.nBlocks = nBlocks;
 	taskW.nVar(1).name = 'pedestalWhite';
-	taskW.nVar(1).stimulus = [1];
-	taskW.nVar(1).values = pedestalWhite;% Xu 20180515
+	taskW.nVar(1).stimulus = 1;
+	taskW.nVar(1).values = pedestalWhite;
 	randomiseStimuli(taskW);
 	initialiseTask(taskW);
 	
 	taskB = stimulusSequence();
-	taskB.name = nameExp;
+	taskB.name = ana.nameExp;
 	taskB.nBlocks = nBlocks;
 	taskB.nVar(1).name = 'pedestalBlack';
-	taskB.nVar(1).stimulus = [1];
-	taskB.nVar(1).values = pedestalBlack;% Xu 20180515
+	taskB.nVar(1).stimulus = 1;
+	taskB.nVar(1).values = pedestalBlack;
 	randomiseStimuli(taskB);
 	initialiseTask(taskB);
 else
 	taskB.thisRun = 0; taskW.thisRun = 0;
-	stopCriterion = 'trials';
-	trials = 40;
-	stopRule = 30;
-	usePriors = true;
+	stopRule = 40;
+	usePriors = ana.usePriors;
 	grain = 100;
 	setupStairCase();
 end
@@ -192,25 +196,12 @@ end
 %=====================================================================
 try %our main experimental try catch loop
 %=====================================================================
-	
-	if useEyeLink == true; getSample(eL); end %ensure our eyelink code is in memory
-	
+		
 	loop = 1;
 	breakloop = false;
 	fixated = 'no';
 	response = NaN;
-	
 	responseRedo = 0; %number of trials the subject was unsure and redid (left arrow)
-	
-	figH = figure('Position',[0 0 900 700],'NumberTitle','off','Name',...
-		['Subject: ' subject ' @ ' lab ' started ' datestr(now) ' | ' comments]);
-	box on; grid on; grid minor; ylim([2.4 3.6]);
-	xlabel('Trials (red=BLACK blue=WHITE)')
-	ylabel('Pedestal Size')
-	title('Masked Size Pedestal Experiment')
-	drawnow; WaitSecs(0.25);
-	
-	breakloop = false;
 
 	while ~breakloop && task.thisRun <= task.nRuns
 		%-----setup our values and print some info for the trial
@@ -261,52 +252,53 @@ try %our main experimental try catch loop
 		ts(2).selected = true;
 		
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
-		Priority(MaxPriority(sM.win));
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
-% 		posloop = posloop + 1;
+
 		stimuli.update();
-% 		stimuli.stimuli{1}.update();
-% 		stimuli.stimuli{2}.update();
 		stimuli.maskStimuli{1}.update();
 		
 		%-----initialise eyelink and draw fix spot
 		if useEyeLink
 			resetFixation(eL);
-			updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixDiameter, strictFixation);
 			trackerClearScreen(eL);
-			trackerDrawFixation(eL); %draw fixation window on eyelink computer
 			trackerDrawStimuli(eL,ts);
+			trackerDrawFixation(eL); %draw fixation window on eyelink computer
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
-				edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
-				edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
-				edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
-				startRecording(eL);
+			edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
+			edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+			edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
+			startRecording(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
 			syncTime(eL);
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
-				drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
+				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 				tFix = Screen('Flip',sM.win); %flip the buffer
 				getSample(eL);
 				fixated=testSearchHoldFixation(eL,'fix','breakfix');
 			end
-			if strcmpi(fixated,'breakfix'); response = BREAKFIX; end
+			if strcmpi(fixated,'breakfix')
+				fprintf(' BREAK INIT FIXATION');
+				response = BREAKFIX;
+			end
 		else
-			drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
+			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 			tFix = Screen('Flip',sM.win); %flip the buffer
 			WaitSecs(0.5);
 			fixated = 'fix';
 		end
 		
 		%------Our main stimulus drawing loop
-		while strcmpi(fixated,'fix') %initial fixation held
+		finishLoop = false;
+		while strcmpi(fixated,'fix') && finishLoop == false
 			if useEyeLink; edfMessage(eL,'END_FIX'); statusMessage(eL,'Show Stimulus...'); end
+		
+			%=====================STIMULUS
 			stimuli.show();
-			tStim = GetSecs;
-			vbl = tStim;
-			while vbl <= tStim+stimTime
+			tStim = GetSecs;  vbl = tStim;
+			while vbl <= tStim + ana.stimulusTime
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -321,15 +313,19 @@ try %our main experimental try catch loop
 				animate(stimuli); %animate stimulus, will be seen on next draw
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
 			end
-			if ~strcmpi(fixated,'fix')
-				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
-				continue
+			if useEyeLink && ~strcmpi(fixated,'fix')
+				response = BREAKFIX; finishLoop = true;
+				statusMessage(eL,'Subject Broke Fixation!');
+				edfMessage(eL,'MSG:BreakFix')
+				break
 			end
+			
+			%====================PEDESTAL
 			stimuli{1}.colourOut = 0.5;stimuli{2}.colourOut = 0.5;
 			tPedestal=GetSecs;
 			while GetSecs <= tPedestal + pedestalTime
 				draw(stimuli); %draw stimulus
-				drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
+				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 				if useEyeLink
 					getSample(eL);
@@ -343,12 +339,16 @@ try %our main experimental try catch loop
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
 			end
 			if ~strcmpi(fixated,'fix')
-				response = BREAKFIX; statusMessage(eL,'Subject Broke Fixation!'); edfMessage(eL,'MSG:BreakFix')
-				continue
+				response = BREAKFIX; finishLoop = true;
+				statusMessage(eL,'Subject Broke Fixation!');
+				edfMessage(eL,'MSG:BreakFix')
+				break
 			end
+			
+			%=====================MASK
 			stimuli.showMask = true; %metaStimulus can trigger a mask
 			tMask=GetSecs;
-			while GetSecs <= tMask + maskTime
+			while GetSecs <= tMask + ana.maskTime
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -356,103 +356,94 @@ try %our main experimental try catch loop
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
 			end
 			
+			%=====================RESPONSE
 			drawBackground(sM);
-			Screen('DrawText',sM.win,['Which is bigger: [LEFT]=Left [RIGHT]=SHOW AGAIN [UP]=Same [DOWN]=unsure '],0,0);
+			Screen('DrawText',sM.win,['Which is bigger: [LEFT]=LEFT [RIGHT]=RIHGT [UP]=Same [DOWN]=unsure '],0,0);
+			tMaskOff = Screen('Flip',sM.win);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
 				edfMessage(eL,'END_RT'); ...
 			end
-		tMaskOff = Screen('Flip',sM.win);
+		    finishLoop = true;
+		end
 		
 		%-----check keyboard
-		breakloopkey = false;
-		ListenChar(2);
-		while ~breakloopkey
+		if response ~= BREAKFIX
+			ListenChar(2);
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
-			if keyIsDown == 1
-				rchar = KbName(keyCode);
-				if iscell(rchar);rchar=rchar{1};end
-				fprintf(' CHAR IS %s', rchar);
-				switch lower(rchar)
-					case {'leftarrow','left'}
-						breakloopkey = true; fixated = 'no';
-						response = YESLEFT;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed LEFT!');
-							edfMessage(eL,'Subject Pressed LEFT')
-						end
-						doPlot();
-					case {'uparrow','up'} %brighter than
-						breakloopkey = true; fixated = 'no';
-						response = NOSEE;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed uparrow!');
-							edfMessage(eL,'Subject Pressed uparrow')
-						end
-						doPlot();
-					case {'downarrow','down'} %darker than
-						breakloopkey = true; fixated = 'no';
-						response = UNSURE;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject Pressed UNSURE!');
-							edfMessage(eL,'Subject Pressed UNSURE')
-						end
-						doPlot();
-					case {'rightarrow','right'}
-						breakloopkey = true; fixated = 'no';
-						response = YESRIGHT;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject RIGHT!');
-							edfMessage(eL,'Subject RIGHT')
-						end
-						doPlot();
-					case {'backspace','delete'}
-						breakloopkey = true; fixated = 'no';
-						response = -10;
-						updateResponse();
-						if useEyeLink
-							trackerDrawText(eL,'Subject UNDO!');
-							edfMessage(eL,'Subject UNDO')
-						end
-						doPlot();
-					case {'c'} %calibrate
-						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
-						stopRecording(eL);
-						setOffline(eL);
-						trackerSetup(eL);
-						WaitSecs(2);
-					case {'d'}
-						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
-						stopRecording(eL);
-						setOffline(eL);
-						success = driftCorrection(eL);
-						WaitSecs(2);
-					case {'q'} %quit
-						response = BREAKFIX;
-						breakloopkey = true; fixated = 'no';
-						fprintf('\n!!!QUIT!!!\n');
-						breakloop = true;
-					otherwise
-						breakloopkey = true; fixated = 'no';
-						response = UNSURE;
-						updateResponse();
-						if useEyeLink
-							statusMessage(eL,'Subject UNSURE!');
-							edfMessage(eL,'Subject UNSURE')
-						end
-				end
+			rchar = KbName(keyCode);
+			if iscell(rchar);rchar=rchar{1};end
+			switch lower(rchar)
+				case {'leftarrow','left'}
+					response = YESLEFT;
+					updateResponse();
+					if useEyeLink
+						trackerDrawText(eL,'Subject Pressed LEFT!');
+						edfMessage(eL,'Subject Pressed LEFT')
+					end
+					doPlot();
+				case {'uparrow','up'} %brighter than
+					response = NOSEE;
+					updateResponse();
+					if useEyeLink
+						trackerDrawText(eL,'Subject Pressed uparrow!');
+						edfMessage(eL,'Subject Pressed uparrow')
+					end
+					doPlot();
+				case {'downarrow','down'} %darker than
+					response = UNSURE;
+					updateResponse();
+					if useEyeLink
+						trackerDrawText(eL,'Subject Pressed UNSURE!');
+						edfMessage(eL,'Subject Pressed UNSURE')
+					end
+					doPlot();
+				case {'rightarrow','right'}
+					response = YESRIGHT;
+					updateResponse();
+					if useEyeLink
+						trackerDrawText(eL,'Subject RIGHT!');
+						edfMessage(eL,'Subject RIGHT')
+					end
+					doPlot();
+				case {'backspace','delete'}
+					response = -10;
+					updateResponse();
+					if useEyeLink
+						trackerDrawText(eL,'Subject UNDO!');
+						edfMessage(eL,'Subject UNDO')
+					end
+					doPlot();
+				case {'c'} %calibrate
+					response = BREAKFIX;
+					stopRecording(eL);
+					setOffline(eL);
+					trackerSetup(eL);
+					WaitSecs(2);
+				case {'d'}
+					response = BREAKFIX;
+					breakloopkey = true; fixated = 'no';
+					stopRecording(eL);
+					setOffline(eL);
+					success = driftCorrection(eL);
+					WaitSecs(2);
+				case {'q'} %quit
+					response = BREAKFIX;
+					fprintf('\n!!!QUIT!!!\n');
+					breakloop = true;
+				otherwise
+					response = UNSURE;
+					updateResponse();
+					if useEyeLink
+						statusMessage(eL,'Subject UNSURE!');
+						edfMessage(eL,'Subject UNSURE')
+					end
 			end
+
 		end
 		tEnd = GetSecs;
 		ListenChar(0);
-		end
 		resetFixation(eL); trackerClearScreen(eL);
 		stopRecording(eL);
 		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);

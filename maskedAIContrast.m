@@ -564,9 +564,11 @@ end
 		hold(ana.plotAxis1,'off')
 		
 		if ana.useStaircase == true
+			scaleM = 200;
+            tit = ''; tit2 = '';
 			cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
 			if ~isempty(staircaseB.threshold)
-				rB = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
+				rB = linspace(min(staircaseB.stimRange),max(staircaseW.stimRange),100);
 				outB = ana.PF([staircaseB.threshold(end) ...
 					staircaseB.slope(end) staircaseB.guess(end) ...
 					staircaseB.lapse(end)], rB);
@@ -576,11 +578,20 @@ end
 				t = staircaseB.x(1:length(r));
 				yes = r == 1;
 				no = r == 0;
-				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',10);
-				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'ro','MarkerFaceColor','w','MarkerSize',10);
+				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',3);
+				plot(ana.plotAxis2,t(no), zeros(1,sum(no)),'ro','MarkerFaceColor','w','MarkerSize',3);
+				[SL, NP, OON] = PAL_PFML_GroupTrialsbyX(staircaseB.x(1:length(staircaseB.response)),...
+					staircaseB.response,...
+					ones(size(staircaseB.response)));
+				for SR = 1:length(SL(OON~=0))
+					scatter(ana.plotAxis2, SL(SR), NP(SR)/OON(SR), scaleM*sqrt(OON(SR)./sum(OON)), ...
+						'MarkerFaceColor',[1 0.7 0.7],'MarkerEdgeColor','k','MarkerFaceAlpha',.7)
+				end
+				tit = sprintf('B\\alpha:%.2g \\pm %.2g | B\\beta:%.2g \\pm %.2g',...
+					staircaseB.threshold(end),staircaseB.seThreshold(end),staircaseB.slope(end),staircaseB.seSlope(end));
 			end
 			if ~isempty(staircaseW.threshold)
-				rW = [min(staircaseB.stimRange):.01:max(staircaseW.stimRange)];
+				rW = linspace(min(staircaseB.stimRange),max(staircaseW.stimRange),100);
 				outW = ana.PF([staircaseW.threshold(end) ...
 					staircaseW.slope(end) staircaseW.guess(end) ...
 					staircaseW.lapse(end)], rW);
@@ -592,13 +603,39 @@ end
 				no = r == 0;
 				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
 				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'bd','MarkerFaceColor','w','MarkerSize',8);
+				[SL, NP, OON] = PAL_PFML_GroupTrialsbyX(staircaseW.x(1:length(staircaseW.response)),...
+					staircaseW.response,...
+					ones(size(staircaseW.response)));
+				for SR = 1:length(SL(OON~=0))
+					scatter(ana.plotAxis2, SL(SR), NP(SR)/OON(SR), scaleM*sqrt(OON(SR)./sum(OON)), ...
+						'MarkerFaceColor',[1 0.7 0.7],'MarkerEdgeColor','k','MarkerFaceAlpha',.7)
+				end
+				tit2 = sprintf(' | W\\alpha:%.2g \\pm %.2g | W\\beta:%.2g \\pm %.2g',...
+					staircaseW.threshold(end),staircaseW.seThreshold(end),staircaseW.slope(end),staircaseW.seSlope(end));
 			end
 			box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
-			ylim(ana.plotAxis2, [ana.gamma 1]);
+			ylim(ana.plotAxis2, [0 1]);
 			xlim(ana.plotAxis2, [0 1]);
+			title(ana.plotAxis2,[tit tit2]);
 			xlabel(ana.plotAxis2, 'Luminance (red=BLACK blue=WHITE)');
 			ylabel(ana.plotAxis2, 'Responses');
 			hold(ana.plotAxis2, 'off');
+			
+			%=========================plot posteriors
+			cla(ana.plotAxis3); 
+			pos = PAL_Scale0to1(staircaseB.pdf(:,:,1,1));
+			imagesc(ana.plotAxis3, staircaseB.priorBetaRange, staircaseB.priorAlphaRange, pos);
+			axis(ana.plotAxis3,'tight');
+			xlabel(ana.plotAxis3, 'Beta \beta');
+			ylabel(ana.plotAxis3, 'Alpha \alpha');
+			title(ana.plotAxis3, 'Black Posterior');
+			cla(ana.plotAxis4); 
+			pos = PAL_Scale0to1(staircaseW.pdf(:,:,1,1));
+			imagesc(ana.plotAxis4, staircaseW.priorBetaRange, staircaseW.priorAlphaRange, pos);
+			axis(ana.plotAxis4,'tight');
+			xlabel(ana.plotAxis4, 'Beta \beta');
+			ylabel(ana.plotAxis4, 'Alpha \alpha');
+			title(ana.plotAxis4, 'White Posterior');
 		end
 		drawnow;
 	end
