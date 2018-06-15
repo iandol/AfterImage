@@ -1,10 +1,10 @@
-function maskedAISize2()
+function maskedAISize2(ana)
 
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
 KbName('UnifyKeyNames');
 
-%------------Base Experiment settings--------------
+%===================Initiate out metadata===================
 ana.date = datestr(datetime);
 ana.version = Screen('Version');
 ana.computer = Screen('Computer');
@@ -18,8 +18,8 @@ end
 
 %===================Make a name for this run===================
 cd(ana.ResultDir)
-if ana.useStaircase; type = 'AISTAIR'; else type = 'AIMOC'; end %#ok<*UNRCH>
 if ~isempty(ana.subject)
+	if ana.useStaircase; type = 'AISTAIR'; else; type = 'AIMOC'; end %#ok<*UNRCH>
 	nameExp = [type '_' ana.subject];
 	c = sprintf(' %i',fix(clock()));
 	nameExp = [nameExp c];
@@ -36,7 +36,6 @@ useEyeLink = ana.useEyelink;
 nBlocks = ana.nBlocks;
 nBlocksOverall = nBlocks * length(ana.pedestalRange);
 
-
 % pedestalRange = 0.8:0.02:1.2;
 nBlocksOverall = nBlocks * length(pedestalRange);
 pedestalBlackLinear = pedestalRange;
@@ -44,17 +43,14 @@ pedestalWhiteLinear = pedestalRange;
 pedestalBlack =  pedestalRange;
 pedestalWhite = pedestalRange;  % by Xu20180515
 
-
-
-
 %-------------------response values, linked to left, up, down
-NOSEE = 1; 	YESRIGHT = 2; YESLEFT = 3; UNSURE = 4; BREAKFIX = -1;
+SAME = 3; 	 UNSURE = 4; BREAKFIX = -1;
 
-%-----------------------Positions to move stimuli
-XPos1 = [1.414 1.414 -1.414 -1.414];     
-YPos1 = [1.414 -1.414 -1.414 1.414];     
-XPos2 = [-1.414 -1.414 1.414 1.414];    
-YPos2 = [1.414 -1.414 -1.414 1.414];
+%-----------------------Positionqs to move stimuli
+XPos1 = [1.8 1.8 -1.8 -1.8];     
+YPos1 = [1.8 -1.8 1.8 -1.8];     
+XPos2 = [-1.8 -1.8 1.8 1.8];    
+YPos2 = [1.8 -1.8 1.8 -1.8];    
 
 saveMetaData();
 
@@ -196,7 +192,7 @@ end
 %=====================================================================
 try %our main experimental try catch loop
 %=====================================================================
-		
+
 	loop = 1;
 	breakloop = false;
 	fixated = 'no';
@@ -215,33 +211,29 @@ try %our main experimental try catch loop
 				pedestal = staircaseB.xCurrent*discSize;
 				stimuli{1}.sizeOut = pedestal;
 				stimuli{2}.sizeOut = discSize;
-				if posloop == 1 || posloop == 3; posloop = 2; else posloop = 1; end
 			else
-				pedestal = discSize*staircaseW.xCurrent;
-				 stimuli{1}.sizeOut = discSize;
-				 stimuli{2}.sizeOut = pedestal;  
-				if posloop == 1 || posloop == 3; posloop = 4; else posloop = 3; end
+				pedestal = staircaseW.xCurrent*discSize;
+                stimuli{1}.sizeOut = discSize;
+                stimuli{2}.sizeOut = pedestal;
 			end
 		else
 			if colourOut == 0
 				pedestal = taskB.outValues{taskB.thisRun,1};
 				stimuli{1}.sizeOut = pedestal;
 				stimuli{2}.sizeOut = discSize;
-				if posloop == 1 || posloop == 3; posloop = 2; else posloop = 1; end
             else
 			    pedestal = taskW.outValues{taskW.thisRun,1};% Xu 20150515
 				 stimuli{1}.sizeOut = discSize;
 				 stimuli{2}.sizeOut = pedestal;  
-				if posloop == 1 || posloop == 3; posloop = 4; else posloop = 3; end
 			end
-		end
-
+        end
+        posloop = posloop + 1;
+        if posloop>4;posloop=1;end
 		stimuli{1}.xPositionOut = XPos1(posloop);
 		stimuli{1}.yPositionOut = YPos1(posloop);
 		stimuli{2}.xPositionOut = XPos2(posloop);
 		stimuli{2}.yPositionOut = YPos2(posloop);
 		
-
 		ts(1).x = XPos1(posloop);
 		ts(1).y = YPos1(posloop);
 		ts(1).size = stimuli{1}.sizeOut/sM.ppd;
@@ -253,13 +245,12 @@ try %our main experimental try catch loop
 		
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
-		
-
+				
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();
 		
 		%-----initialise eyelink and draw fix spot
-		if useEyeLink
+			if useEyeLink
 			resetFixation(eL);
 			trackerClearScreen(eL);
 			trackerDrawStimuli(eL,ts);
@@ -291,13 +282,14 @@ try %our main experimental try catch loop
 		end
 		
 		%------Our main stimulus drawing loop
-		finishLoop = false;
-		while strcmpi(fixated,'fix') && finishLoop == false
+        finishLoop = false;
+		while strcmpi(fixated,'fix') %initial fixation held
 			if useEyeLink; edfMessage(eL,'END_FIX'); statusMessage(eL,'Show Stimulus...'); end
-		
-			%=====================STIMULUS
-			stimuli.show();
-			tStim = GetSecs;  vbl = tStim;
+			
+            %=====================STIMULUS
+            stimuli.show();
+			tStim = GetSecs;
+			vbl = tStim;
 			while vbl <= tStim + ana.stimulusTime
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],fixX,fixY);
@@ -318,12 +310,12 @@ try %our main experimental try catch loop
 				statusMessage(eL,'Subject Broke Fixation!');
 				edfMessage(eL,'MSG:BreakFix')
 				break
-			end
-			
-			%====================PEDESTAL
+            end
+            
+            %% ====================PEDESTAL
 			stimuli{1}.colourOut = 0.5;stimuli{2}.colourOut = 0.5;
 			tPedestal=GetSecs;
-			while GetSecs <= tPedestal + pedestalTime
+			while GetSecs <= tPedestal + ana.pedestalTime
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -343,9 +335,9 @@ try %our main experimental try catch loop
 				statusMessage(eL,'Subject Broke Fixation!');
 				edfMessage(eL,'MSG:BreakFix')
 				break
-			end
-			
-			%=====================MASK
+            end
+            
+            %% =====================MASK
 			stimuli.showMask = true; %metaStimulus can trigger a mask
 			tMask=GetSecs;
 			while GetSecs <= tMask + ana.maskTime
@@ -354,96 +346,119 @@ try %our main experimental try catch loop
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 				animate(stimuli); %animate stimulus, will be seen on next draw
 				vbl = Screen('Flip',sM.win, vbl + screenVals.halfisi); %flip the buffer
-			end
-			
-			%=====================RESPONSE
+            end
+            
+			%% =====================RESPONSE
 			drawBackground(sM);
-			Screen('DrawText',sM.win,['Which is bigger: [LEFT]=LEFT [RIGHT]=RIHGT [UP]=Same [DOWN]=unsure '],0,0);
-			tMaskOff = Screen('Flip',sM.win);
+			Screen('DrawText',sM.win,['Which is bigger: [LEFT], [RIGHT], [DOWN]=SAME or [UP] = UNSURE '],0,0);
 			if useEyeLink
 				statusMessage(eL,'Waiting for Subject Response!');
 				edfMessage(eL,'Subject Responding')
 				edfMessage(eL,'END_RT'); ...
 			end
-		    finishLoop = true;
+        finishLoop = true;
 		end
 		
-		%-----check keyboard
-		if response ~= BREAKFIX
-			ListenChar(2);
-			[keyIsDown, ~, keyCode] = KbCheck(-1);
-			rchar = KbName(keyCode);
-			if iscell(rchar);rchar=rchar{1};end
-			switch lower(rchar)
-				case {'leftarrow','left'}
-					response = YESLEFT;
-					updateResponse();
-					if useEyeLink
-						trackerDrawText(eL,'Subject Pressed LEFT!');
-						edfMessage(eL,'Subject Pressed LEFT')
-					end
-					doPlot();
-				case {'uparrow','up'} %brighter than
-					response = NOSEE;
-					updateResponse();
-					if useEyeLink
-						trackerDrawText(eL,'Subject Pressed uparrow!');
-						edfMessage(eL,'Subject Pressed uparrow')
-					end
-					doPlot();
-				case {'downarrow','down'} %darker than
-					response = UNSURE;
-					updateResponse();
-					if useEyeLink
-						trackerDrawText(eL,'Subject Pressed UNSURE!');
-						edfMessage(eL,'Subject Pressed UNSURE')
-					end
-					doPlot();
-				case {'rightarrow','right'}
-					response = YESRIGHT;
-					updateResponse();
-					if useEyeLink
-						trackerDrawText(eL,'Subject RIGHT!');
-						edfMessage(eL,'Subject RIGHT')
-					end
-					doPlot();
-				case {'backspace','delete'}
-					response = -10;
-					updateResponse();
-					if useEyeLink
-						trackerDrawText(eL,'Subject UNDO!');
-						edfMessage(eL,'Subject UNDO')
-					end
-					doPlot();
-				case {'c'} %calibrate
-					response = BREAKFIX;
-					stopRecording(eL);
-					setOffline(eL);
-					trackerSetup(eL);
-					WaitSecs(2);
-				case {'d'}
-					response = BREAKFIX;
-					breakloopkey = true; fixated = 'no';
-					stopRecording(eL);
-					setOffline(eL);
-					success = driftCorrection(eL);
-					WaitSecs(2);
-				case {'q'} %quit
-					response = BREAKFIX;
-					fprintf('\n!!!QUIT!!!\n');
-					breakloop = true;
-				otherwise
-					response = UNSURE;
-					updateResponse();
-					if useEyeLink
-						statusMessage(eL,'Subject UNSURE!');
-						edfMessage(eL,'Subject UNSURE')
-					end
-			end
-
-		end
+		%% -----check keyboard
+        if response ~= BREAKFIX
+            ListenChar(2);
+            [keyIsDown, ~, keyCode] = KbCheck(-1);
+            rchar = KbName(keyCode);
+				if iscell(rchar);rchar=rchar{1};end
+				fprintf(' CHAR IS %s', rchar);
+				switch lower(rchar)
+					case {'leftarrow','left'}
+                        if colourOut==0
+                        if posloop == 1 | posloop == 2
+                            response = 0;
+                        else
+                            response = 1
+                        end
+                        else 
+                        if posloop == 3 | posloop == 4
+                            response = 0;
+                        else
+                            response = 1   
+                        end
+                        end  
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject Pressed LEFT!');
+							edfMessage(eL,'Subject Pressed LEFT')
+						end
+						doPlot();
+					case {'uparrow','up'} %
+						response = UNSURE; % unsure
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject Pressed uparrow!');
+							edfMessage(eL,'Subject Pressed uparrow')
+						end
+						doPlot();
+					case {'downarrow','down'} %
+						response = SAME;  % same
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject Pressed UNSURE!');
+							edfMessage(eL,'Subject Pressed UNSURE')
+						end
+						doPlot();
+					case {'rightarrow','right'}
+						if colourOut==1
+                        if posloop == 1 | posloop == 2
+                            response = 0;
+                        else
+                            response = 1
+                        end
+                        else 
+                        if posloop == 3 | posloop == 4
+                            response = 0;
+                        else
+                            response = 1   
+                        end
+                        end  
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject RIGHT!');
+							edfMessage(eL,'Subject RIGHT')
+						end
+						doPlot();
+					case {'backspace','delete'}
+						response = -10;
+						updateResponse();
+						if useEyeLink
+							trackerDrawText(eL,'Subject UNDO!');
+							edfMessage(eL,'Subject UNDO')
+						end
+						doPlot();
+					case {'c'} %calibrate
+						response = BREAKFIX;
+						stopRecording(eL);
+						setOffline(eL);
+						trackerSetup(eL);
+						WaitSecs(2);
+					case {'d'}
+						response = BREAKFIX;
+						stopRecording(eL);
+						setOffline(eL);
+						success = driftCorrection(eL);
+						WaitSecs(2);
+					case {'q'} %quit
+						response = BREAKFIX;
+						fprintf('\n!!!QUIT!!!\n');
+						breakloop = true;
+                    otherwise
+						response = UNSURE;
+						updateResponse();
+						if useEyeLink
+							statusMessage(eL,'Subject UNSURE!');
+							edfMessage(eL,'Subject UNSURE')
+						end
+				end
+        end
 		tEnd = GetSecs;
 		ListenChar(0);
+
 		resetFixation(eL); trackerClearScreen(eL);
 		stopRecording(eL);
 		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);
@@ -452,20 +467,18 @@ try %our main experimental try catch loop
 		Screen('Flip',sM.win); %flip the buffer
 		WaitSecs(0.5);
 	end
-	%-----Cleanup
+	%% -----Cleanup
 	Screen('Flip',sM.win);
 	Priority(0); ListenChar(0); ShowCursor;
 	close(sM); %close screen
 	p=uigetdir(pwd,'Select Directory to Save Data, CANCEL to not save.');
 	if ischar(p)
 		cd(p);
-		md = saveMetaData();
 		response = task.response;
 		responseInfo = task.responseInfo;
-		save([nameExp '.mat'], 'response', 'responseInfo', 'task',...
-			'taskB', 'taskW', 'staircaseB', 'staircaseW', 'md', 'sM',...
+		save([ana.nameExp '.mat'], 'ana', 'response', 'responseInfo', 'task',...
+			'taskB', 'taskW', 'staircaseB', 'staircaseW', 'sM',...
 			'stimuli', 'eL');
-		if ishandle(figH); saveas(figH, [nameExp '.fig']); end
 		disp(['=====SAVE, saved current data to: ' pwd]);
 	else
 		eL.saveFile = ''; %blank save file so it doesn't save
@@ -477,10 +490,8 @@ catch ME
 	close(sM); %close screen
 	Priority(0); ListenChar(0); ShowCursor;
 	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
-	md = saveMetaData();
-	save([nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
-		'staircaseB', 'staircaseW', 'md', 'sM', 'stimuli', 'eL', 'ME')
-	if ishandle(figH); saveas(figH, [nameExp 'CRASH.fig']); end
+	save([ana.nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
+		'staircaseB', 'staircaseW', 'ana', 'sM', 'stimuli', 'eL', 'ME')
 	ple(ME)
 	if useEyeLink == true; eL.saveFile = [nameExp 'CRASH.edf']; close(eL); end
 	reset(stimuli);
@@ -491,7 +502,7 @@ end
 	function updateResponse()
 		tEnd = GetSecs;
 		ListenChar(0);
-		if response == NOSEE || response == YESRIGHT || response == YESLEFT %subject responded
+		if response == SAME || response == 1 || response == 0 %subject responded
 			responseInfo.response = response;
 			responseInfo.N = task.thisRun;
 			responseInfo.times = [tFix tStim tPedestal tMask tMaskOff tEnd];
@@ -504,14 +515,14 @@ end
 			updateTask(task,response,tEnd,responseInfo)
 			if useStaircase == true
 				if colourOut == 0
-					if response == NOSEE || response == YESLEFT
+					if  response == 0
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
 					end
 					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse);
 				elseif colourOut == 1
-					if response == NOSEE || response == YESLEFT
+					if  response == 0
 						yesnoresponse = 0;
 					else
 						yesnoresponse = 1;
@@ -548,11 +559,10 @@ end
 
 	function doPlot()
 		ListenChar(0);
-		figure(figH);
 		
-		if isempty(task.response)
-			return
-		end
+% 		if isempty(task.response)
+% 			return
+% 		end
 		
 		x = 1:length(task.response);
 		info = cell2mat(task.responseInfo);
@@ -561,21 +571,17 @@ end
 		idxW = [info.contrastOut] == 1;
 		idxB = [info.contrastOut] == 0;
 		
-		idxNO = task.response == NOSEE;
-		idxYESRIGHT = task.response == YESRIGHT;
-		idxYESLEFT = task.response == YESLEFT;
-		
-		if useStaircase == true
-			subplot(2,1,1)
-		end
-		
-		cla; line([0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold on
-		plot(x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
-		plot(x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
-		plot(x(idxYESLEFT & idxB), ped(idxYESLEFT & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESLEFT & idxW), ped(idxYESLEFT & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESRIGHT & idxB), ped(idxYESRIGHT & idxB),'r^','MarkerFaceColor','w','MarkerSize',8);
-		plot(x(idxYESRIGHT & idxW), ped(idxYESRIGHT & idxW),'b^','MarkerFaceColor','w','MarkerSize',8);
+		idxNO = task.response == SAME;
+		idxYESBIG = task.response == 1;
+		idxYESSMALL = task.response == 0;
+			
+		cla(ana.plotAxis1);  line([0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold on
+		plot(ana.plotAxis1,x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESSMALL & idxB), ped(idxYESSMALL & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESSMALL & idxW), ped(idxYESSMALL & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESBIG & idxB), ped(idxYESBIG & idxB),'r^','MarkerFaceColor','w','MarkerSize',8);
+		plot(ana.plotAxis1,x(idxYESBIG & idxW), ped(idxYESBIG & idxW),'b^','MarkerFaceColor','w','MarkerSize',8);
 		
 		if length(task.response) > 4
 			try %#ok<TRYNC>
@@ -591,51 +597,55 @@ end
 					p = 1;
 				end
 				t = sprintf('TRIAL:%i BLACK=%.2g +- %.2g (%i)| WHITE=%.2g +- %.2g (%i) | P=%.2g [B=%.2g W=%.2g]', task.thisRun, bAvg, bErr, length(blackPedestal), wAvg, wErr, length(whitePedestal), p, mean(abs(blackPedestal-0.5)), mean(abs(whitePedestal-0.5)));
-				title(t);
+				title(ana.plotAxis1, t);
 			end
 		else
 			t = sprintf('TRIAL:%i', task.thisRun);
-			title(t);
+			title(ana.plotAxis1, t);
 		end
-		box on; grid on; ylim([2 3]); xlim([0 max(x)+1]);
-		xlabel('Trials (red=BLACK blue=WHITE)')
-		ylabel('Pedestal Size')
-		hold off
+		box(ana.plotAxis1,'on'); grid(ana.plotAxis1,'on');
+		ylim(ana.plotAxis1,[0.8 1.2]);
+		xlim(ana.plotAxis1,[0 max(x)+1]);
+		xlabel(ana.plotAxis1,'Trials (red=BLACK blue=WHITE)')
+		ylabel(ana.plotAxis1,'Stimulus Size')
+		hold(ana.plotAxis1,'off')
+        
 		if useStaircase == true
-			subplot(2,1,2)
-			cla; hold on;
+            cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
 			if ~isempty(staircaseB.threshold)
-				rB = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
-				outB = PF([staircaseB.threshold(end) ...
+				rB = [min(staircaseB.stimRange):.004:max(staircaseW.stimRange)];
+				outB = ana.PF([staircaseB.threshold(end) ...
 					staircaseB.slope(end) staircaseB.guess(end) ...
 					staircaseB.lapse(end)], rB);
-				plot(rB,outB,'r-');
+				plot(ana.plotAxis2,rB,outB,'r-','LineWidth',2);
 				
 				r = staircaseB.response;
-				t = staircaseB.threshold;
+				t = staircaseB.x(1:length(r));
 				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'ro','MarkerFaceColor','w','MarkerSize',8);
+				no = r == 0; 
+				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',10);
+				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'ro','MarkerFaceColor','w','MarkerSize',10);
 			end
 			if ~isempty(staircaseW.threshold)
-				rW = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
-				outW = PF([staircaseW.threshold(end) ...
+				rW = [min(staircaseB.stimRange):.004:max(staircaseW.stimRange)];
+				outW =  ana.PF([staircaseW.threshold(end) ...
 					staircaseW.slope(end) staircaseW.guess(end) ...
 					staircaseW.lapse(end)], rW);
-				plot(rW,outW,'b-');
+				plot(ana.plotAxis2,rW,outW,'b--','LineWidth',2);
 				
 				r = staircaseW.response;
-				t = staircaseW.threshold;
+				t = staircaseW.x(1:length(r));
 				yes = r == 1;
-				no = r == 1; 
-				plot(t(yes), ones(1,sum(yes)),'bo','MarkerFaceColor','b','MarkerSize',8);
-				plot(t(no), zeros(1,sum(no)),'bo','MarkerFaceColor','w','MarkerSize',8);
+				no = r == 0; 
+                plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
+                plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'bd','MarkerFaceColor','w','MarkerSize',8);
 			end
-			box on; grid on; ylim([0 1]); xlim([0.8 1.2]);
-			xlabel('Size (red=BLACK blue=WHITE)');
-			ylabel('Responses');
-			hold off
+				box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
+				ylim(ana.plotAxis2, [ana.gamma 1]);
+				xlim(ana.plotAxis2, [0.8 1.2]);
+				xlabel(ana.plotAxis2, 'Size (red=BLACK blue=WHITE)');
+				ylabel(ana.plotAxis2, 'Responses');
+				hold(ana.plotAxis2, 'off');
 		end
 		drawnow;
 	end
@@ -643,77 +653,46 @@ end
 	function setupStairCase()
 		priorAlphaB = linspace(min(pedestalBlack), max(pedestalBlack), grain);
 		priorAlphaW = linspace(min(pedestalWhite), max(pedestalBlack), grain);
-		priorBetaB = linspace(0, 8, 40); %our slope
-		priorBetaW = linspace(0, 8, 40); %our slope
-		priorGammaRange = 0.5;  %fixed value (using vector here would make it a free parameter)
-		priorLambdaRange = 0.01; %ditto
+		priorBetaB = linspace(0, ana.betaMax, 40); %our slope
+		priorBetaW = linspace(0, ana.betaMax, 40); %our slope
+		priorGammaRange = ana.gamma;  %fixed value (using vector here would make it a free parameter)
+		priorLambdaRange = ana.lambda; %ditto
 		
-		staircaseB = PAL_AMPM_setupPM('stimRange',pedestalBlack,'PF',PF,...
+		staircaseB = PAL_AMPM_setupPM('stimRange',pedestalBlack,'PF',ana.PF,...
 			'priorAlphaRange', priorAlphaB, 'priorBetaRange', priorBetaB,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-			'numTrials', stopRule,'marginalize','lapse');
+			'numTrials', stopRule,'marginalize',ana.marginalize);
 		
-		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',PF,...
+		staircaseW = PAL_AMPM_setupPM('stimRange',pedestalWhite,'PF',ana.PF,...
 			'priorAlphaRange', priorAlphaW, 'priorBetaRange', priorBetaW,...
 			'priorGammaRange',priorGammaRange, 'priorLambdaRange',priorLambdaRange,...
-			'numTrials', stopRule,'marginalize','lapse');
+			'numTrials', stopRule,'marginalize',ana.marginalize);
 		
-		
-			priorB = PAL_pdfNormal(staircaseB.priorAlphas,0.8,1.2).*PAL_pdfNormal(staircaseB.priorBetas,3,8);
-			priorW = PAL_pdfNormal(staircaseW.priorAlphas,0.8,1.2).*PAL_pdfNormal(staircaseW.priorBetas,3,8);
+		if usePriors
+			priorB = PAL_pdfNormal(staircaseB.priorAlphas,ana.alphaPrior,ana.alphaSD).*PAL_pdfNormal(staircaseB.priorBetas,ana.betaPrior,ana.betaSD);
+			priorW = PAL_pdfNormal(staircaseW.priorAlphas,ana.alphaPrior,ana.alphaSD).*PAL_pdfNormal(staircaseW.priorBetas,ana.betaPrior,ana.betaSD);
 			figure;
 			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
 			subplot(1,2,2);imagesc(staircaseW.priorBetaRange,staircaseW.priorAlphaRange,priorW); axis square
 			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors WHITE')
-			if usePriors
-				staircaseB = PAL_AMPM_setupPM(staircaseB,'prior',priorB);
-				staircaseW = PAL_AMPM_setupPM(staircaseW,'prior',priorW);
-			end
+			staircaseB = PAL_AMPM_setupPM(staircaseB,'prior',priorB);
+			staircaseW = PAL_AMPM_setupPM(staircaseW,'prior',priorW);
+		end
 	end
 
-	function md = saveMetaData()
-		md = struct();
-		md.subject = subject;
-		md.lab = lab;
-		md.comments = comments;
-		md.calibrationFile = calibrationFile;
-		md.useEyeLink = useEyeLink;
-		md.isDummy = isDummy;
-		md.useStaircase = useStaircase;
-		md.backgroundColour = backgroundColour;
-		md.stimTime = stimTime;
-		md.pedestalTime = pedestalTime;
-		md.maskTime = maskTime;
-		md.pixelsPerCm = pixelsPerCm; %26 for Dorris lab,32=Lab CRT -- 44=27"monitor or Macbook Pro
-		md.distance = distance; %64.5 in Dorris lab;
-		md.nBlocks = nBlocks;
-		md.nBlocksOverall = nBlocksOverall;
-		md.windowed = windowed;
-		md.useScreen = useScreen; %screen 1 in Dorris lab is CRT
-		md.eyelinkIP = eyelinkIP;
-		md.pedestalRange = pedestalRange;
-		md.pedestalBlackLinear = pedestalBlackLinear;
-		md.pedestalWhiteLinear = pedestalWhiteLinear;
-		md.pedestalBlack = pedestalBlack;
-		md.pedestalWhite = pedestalWhite;
-		md.sigma = sigma;
-% 		md.discSize = discSize;
-		md.NOSEE = NOSEE;
-		md.YESRIGHT = YESRIGHT;
-		md.YESLEFT = YESLEFT;
-		md.UNSURE = UNSURE;
-		md.BREAKFIX = BREAKFIX;
-		md.XPos = XPos1;
-		md.yPos = YPos1;
-		
-		md.fixX = fixX;
-		md.fixY = fixY;
-		md.firstFixInit = firstFixInit;
-		md.firstFixTime = firstFixTime;
-		md.firstFixRadius = firstFixDiameter;
-		md.strictFixation = strictFixation;
-		
+	function saveMetaData()
+		ana.values.nBlocksOverall = nBlocksOverall;
+		ana.values.pedestalBlackLinear = pedestalBlackLinear;
+		ana.values.pedestalWhiteLinear = pedestalWhiteLinear;
+		ana.values.pedestalBlack = pedestalBlack;
+		ana.values.pedestalWhite = pedestalWhite;
+		ana.values.NOSEE = NOSEE;
+	    ana.values.YESSEE = YESSEE;
+		ana.values.UNSURE = UNSURE;
+		ana.values.BREAKFIX = BREAKFIX;
+		ana.values.XPos = XPos;
+		ana.values.yPos = YPos;
 	end
 
 	function [avg,error] = stderr(data,type,onlyerror)
