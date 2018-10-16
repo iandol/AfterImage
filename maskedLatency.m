@@ -1,4 +1,4 @@
-function maskedAILatency(ana)
+function maskedLatency(ana)
 
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
@@ -36,7 +36,7 @@ useEyeLink = ana.useEyelink;
 nBlocks = ana.nBlocks;
 nBlocksOverall = nBlocks * length(ana.pedestalRange);
 
-% pedestalRange = 0:0.02:0.4;
+% pedestalRange = 0:0.002:0.1;
 if ana.useStaircase
 	pedestalBlack = ana.pedestalRange;
 	pedestalBlackLinear = pedestalBlack;
@@ -271,7 +271,7 @@ try %our main experimental try catch loop
 			%=====================STIMULUS
 			stimuli.show();
 			tStim = GetSecs;  vbl = tStim;
-			while vbl <= tStim + ana.stimulusTime
+			while vbl <= tStim + pedestal
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -296,7 +296,7 @@ try %our main experimental try catch loop
 			%====================PEDESTAL
 			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
-			while GetSecs <= tPedestal + pedestal
+			while GetSecs <= tPedestal + 0
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -551,7 +551,7 @@ end
 			title(ana.plotAxis1, t);
 		end
 		box(ana.plotAxis1,'on'); grid(ana.plotAxis1,'on');
-		ylim(ana.plotAxis1,[0 0.6]);
+		ylim(ana.plotAxis1,[0 0.1]);
 		xlim(ana.plotAxis1,[0 max(x)+1]);
 		xlabel(ana.plotAxis1,'Trials (red=BLACK blue=WHITE)')
 		ylabel(ana.plotAxis1,'Mask latency (s)')
@@ -590,7 +590,7 @@ end
 
 				box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
 				ylim(ana.plotAxis2, [ana.gamma 1]);
-				xlim(ana.plotAxis2, [0 0.6]);
+				xlim(ana.plotAxis2, [0 0.1]);
 				xlabel(ana.plotAxis2, 'Mask latency (s) (red=BLACK blue=WHITE)');
 				ylabel(ana.plotAxis2, 'Responses');
 				hold(ana.plotAxis2, 'off');
