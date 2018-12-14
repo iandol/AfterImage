@@ -37,9 +37,9 @@ nBlocks = ana.nBlocks;
 nBlocksOverall = nBlocks * length(ana.pedestalRange);
 
 if ana.useStaircase
-	pedestalBlack = 0.5 - fliplr(ana.pedestalRange);
+	pedestalBlack = ana.pedestalRange;
 	pedestalBlackLinear = pedestalBlack;
-	pedestalWhite = 0.5 + ana.pedestalRange;
+	pedestalWhite = ana.pedestalRange;
 	pedestalWhiteLinear = pedestalWhite;
 else
 	pedestalBlack = 0.5 - fliplr(ana.pedestalRange);
@@ -583,7 +583,7 @@ end
 				plot(ana.plotAxis2,rB,outB,'r-','LineWidth',2);
 				
 				r = staircaseB.response;
-				t = 0.5-staircaseB.x(1:length(r));
+				t = staircaseB.x(1:length(r));
 				yes = r == 1;
 				no = r == 0;
 				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',3);
@@ -611,7 +611,7 @@ end
 				plot(ana.plotAxis2,rW,outW,'b--','LineWidth',2);
 				
 				r = staircaseW.response;
-				t = 0.5+staircaseW.x(1:length(r));
+				t = staircaseW.x(1:length(r));
 				yes = r == 1;
 				no = r == 0;
 				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',3);
@@ -630,7 +630,7 @@ end
 			ylim(ana.plotAxis2, [0 1]);
 			xlim(ana.plotAxis2, [0 1]);
 			title(ana.plotAxis2,[tit tit2]);
-			xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
+			xlabel(ana.plotAxis2, 'Luminance (red=BLACK blue=WHITE)');
 			ylabel(ana.plotAxis2, 'Responses');
 			hold(ana.plotAxis2, 'off');
 			
