@@ -37,9 +37,9 @@ nBlocks = ana.nBlocks;
 nBlocksOverall = nBlocks * length(ana.pedestalRange);
 
 if ana.useStaircase
-	pedestalBlack = 0.5 - fliplr(ana.pedestalRange);
+	pedestalBlack = ana.pedestalRange;
 	pedestalBlackLinear = pedestalBlack;
-	pedestalWhite = 0.5 + ana.pedestalRange;
+	pedestalWhite = ana.pedestalRange;
 	pedestalWhiteLinear = pedestalWhite;
 else
 	pedestalBlack = 0.5 - fliplr(ana.pedestalRange);
@@ -52,8 +52,10 @@ end
 NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
-XPos = [3 1.5 -1.5 -1.5 1.5 -3];
-YPos = [0 2.598 2.598 -2.598 -2.598 0];
+XPos = [3 1.5 -1.5 -1.5 1.5 -3] * 3 / 3;
+YPos = [0 2.598 2.598 -2.598 -2.598 0] * 3 / 3;
+if ana.discSize <= 1;  XPos =  2/3*XPos; YPos =  2/3*YPos;   end
+if ana.discSize >= 4;  XPos =  4/3*XPos; YPos =  4/3*YPos;   end
 
 saveMetaData();
 
@@ -149,7 +151,7 @@ task.name = ana.nameExp;
 task.nBlocks = nBlocksOverall;
 task.nVar(1).name = 'colour';
 task.nVar(1).stimulus = 1;
-task.nVar(1).values = [0 1];
+task.nVar(1).values = [0.5-ana.stimulusCon 0.5+ana.stimulusCon];
 randomiseStimuli(task);
 initialiseTask(task);
 
@@ -179,7 +181,7 @@ else
 	grain = 100;
 	setupStairCase();
 end
-
+clc
 %=====================================================================
 try %our main experimental try catch loop
 	%=====================================================================
@@ -199,13 +201,13 @@ try %our main experimental try catch loop
 		colourOut = task.outValues{task.thisRun,1};
 		stimuli{1}.colourOut = colourOut;
 		if ana.useStaircase == true
-			if colourOut == 0
-				pedestal = staircaseB.xCurrent;
+			if colourOut == 0.5 - ana.stimulusCon
+				pedestal = 0.5-staircaseB.xCurrent;
 			else
-				pedestal = staircaseW.xCurrent;
+				pedestal = 0.5+staircaseW.xCurrent;
 			end
 		else
-			if colourOut == 0
+			if colourOut == 0.5 - ana.stimulusCon
 				pedestal = taskB.outValues{taskB.thisRun,1};
 			else
 				pedestal = taskW.outValues{taskW.thisRun,1};
@@ -450,6 +452,7 @@ catch ME
 	close(sM); %close screen
 	Priority(0); ListenChar(0); ShowCursor;
 	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
+	if ~useEyeLink; eL = []; end
 	save([ana.nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
 		'staircaseB', 'staircaseW', 'ana', 'sM', 'stimuli', 'eL', 'ME')
 	if useEyeLink == true; eL.saveFile = [ana.nameExp 'CRASH.edf']; close(eL); end
@@ -472,25 +475,40 @@ end
 			responseInfo.whiteN = taskW.thisRun;
 			responseInfo.redo = responseRedo;
 			updateTask(task,response,tEnd,responseInfo)
+			task.thisRun = taskB.thisRun+taskW.thisRun;
 			if ana.useStaircase == true
-				if colourOut == 0
-					if response == NOSEE || response == YESDARK
+				if colourOut == 0.5 - ana.stimulusCon
+					if response == YESBRIGHT
 						yesnoresponse = 0;
-					else
+					else if response == NOSEE
+							yesnoresponse = 0.5;
+						else
 						yesnoresponse = 1;
+						end
 					end
-					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse);
-				elseif colourOut == 1
-					if response == NOSEE || response == YESDARK
+					
+					suspend = 0; AvoidConsecutive=1;
+% 					if staircaseB.xCurrent >= 0.35 && AvoidConsecutive
+% 						suspend = 1;
+% 					end
+% 					if suspend == 1
+% 						suspend = rand(1) > 1./9;
+% 					end
+					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse,'fixLapse',suspend);
+				elseif colourOut == 0.5 + ana.stimulusCon
+					if response == YESDARK
 						yesnoresponse = 0;
-					else
-						yesnoresponse = 1;
+					else if response == NOSEE
+							yesnoresponse = 0.5;
+						else
+							yesnoresponse = 1;
+						end
 					end
 					staircaseW = PAL_AMPM_updatePM(staircaseW, yesnoresponse);
 				end
 				fprintf('subject response: %i | ', yesnoresponse)
 			else
-				if colourOut == 0
+				if colourOut == 0.5 - ana.stimulusCon
 					taskB.thisRun = taskB.thisRun + 1;
 				else
 					taskW.thisRun = taskW.thisRun + 1;
@@ -523,8 +541,8 @@ end
 		info = cell2mat(task.responseInfo);
 		ped = [info.pedestal];
 		
-		idxW = [info.contrastOut] == 1;
-		idxB = [info.contrastOut] == 0;
+		idxW = [info.contrastOut] ==  0.5 + ana.stimulusCon;
+		idxB = [info.contrastOut] ==  0.5 - ana.stimulusCon;
 		
 		idxNO = task.response == NOSEE;
 		idxYESBRIGHT = task.response == YESBRIGHT;
@@ -571,7 +589,7 @@ end
             tit = ''; tit2 = '';
 			cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
 			if ~isempty(staircaseB.threshold)
-				rB = linspace(min(staircaseB.stimRange),max(staircaseW.stimRange),200);
+				rB = linspace(min(staircaseB.stimRange),max(staircaseB.stimRange),200);
 				if ana.logSlope
 					b = 10.^staircaseB.slope(end);
 				else
@@ -583,7 +601,7 @@ end
 				plot(ana.plotAxis2,rB,outB,'r-','LineWidth',2);
 				
 				r = staircaseB.response;
-				t = 0.5-staircaseB.x(1:length(r));
+				t = staircaseB.x(1:length(r));
 				yes = r == 1;
 				no = r == 0;
 				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ro','MarkerFaceColor','r','MarkerSize',3);
@@ -599,7 +617,7 @@ end
 					staircaseB.threshold(end),staircaseB.seThreshold(end),b,staircaseB.seSlope(end));
 			end
 			if ~isempty(staircaseW.threshold)
-				rW = linspace(min(staircaseB.stimRange),max(staircaseW.stimRange),200);
+				rW = linspace(min(staircaseW.stimRange),max(staircaseW.stimRange),200);
 				if ana.logSlope
 					b = 10.^staircaseW.slope(end);
 				else
@@ -611,7 +629,7 @@ end
 				plot(ana.plotAxis2,rW,outW,'b--','LineWidth',2);
 				
 				r = staircaseW.response;
-				t = 0.5+staircaseW.x(1:length(r));
+				t = staircaseW.x(1:length(r));
 				yes = r == 1;
 				no = r == 0;
 				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',3);
@@ -628,7 +646,7 @@ end
 			end
 			box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
 			ylim(ana.plotAxis2, [0 1]);
-			xlim(ana.plotAxis2, [0 1]);
+			xlim(ana.plotAxis2, [0 0.5]);
 			title(ana.plotAxis2,[tit tit2]);
 			xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
 			ylabel(ana.plotAxis2, 'Responses');
@@ -659,6 +677,40 @@ end
 			xlabel(ana.plotAxis4, 'Beta \beta');
 			ylabel(ana.plotAxis4, 'Alpha \alpha');
 			title(ana.plotAxis4, 'White Posterior');
+		else
+% 			NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3;
+if task.thisRun > 5
+	cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
+	uniPed = unique(ped);
+	pedW = ped(idxW); pedB = ped(idxB);
+	resW = task.response(idxW); resB = task.response(idxB);
+	temp = find(resW==1); resW(temp)=0.5;
+	temp = find(resW==2); resW(temp)=1;
+	temp = find(resW==3); resW(temp)=0;
+	temp = find(resB==1); resB(temp)=0.5;
+	temp = find(resB==2); resB(temp)=0;
+	temp = find(resB==3); resB(temp)=1;
+	uniPedW = unique(pedW); uniPedB = unique(pedB);
+	for i = 1:length(uniPedB)
+		plotB(i,1) = 0.5-uniPedB(i);
+		temp = find(pedB == uniPedB(i));
+		plotB(i,2) = nanmean(resB(temp));
+	end
+	for i = 1:length(uniPedW)
+		plotW(i,1) = uniPedW(i)-0.5;
+		temp = find(pedW == uniPedW(i));
+		plotW(i,2) = nanmean(resW(temp));
+	end
+	plot(ana.plotAxis2,plotB(:,1), plotB(:,2),'r^','MarkerFaceColor','w','MarkerSize',10);
+	plot(ana.plotAxis2,plotW(:,1), plotW(:,2),'bv','MarkerFaceColor','w','MarkerSize',10);
+	
+	box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
+	ylim(ana.plotAxis2, [0 1]);
+	xlim(ana.plotAxis2, [0 0.5]);
+	xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
+	ylabel(ana.plotAxis2, 'Responses');
+	hold(ana.plotAxis2, 'off');
+end
 		end
 		drawnow;
 	end
@@ -696,13 +748,21 @@ end
 			end
 			priorB = PAL_pdfNormal(staircaseB.priorAlphas,ana.alphaPriorB,ana.alphaSD).*PAL_pdfNormal(staircaseB.priorBetas,bP,bSD);
 			priorW = PAL_pdfNormal(staircaseW.priorAlphas,ana.alphaPriorW,ana.alphaSD).*PAL_pdfNormal(staircaseW.priorBetas,bP,bSD);
-			figure;
-			subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,priorB);axis square
-			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
-			subplot(1,2,2);imagesc(staircaseW.priorBetaRange,staircaseW.priorAlphaRange,priorW); axis square
-			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors WHITE')
 			staircaseB = PAL_AMPM_setupPM(staircaseB,'prior',priorB);
 			staircaseW = PAL_AMPM_setupPM(staircaseW,'prior',priorW);
+			figure;
+			if ana.logSlope
+				subplot(1,2,1);imagesc(10.^staircaseB.priorBetaRange,staircaseB.priorAlphaRange,staircaseB.prior);axis square
+			else
+				subplot(1,2,1);imagesc(staircaseB.priorBetaRange,staircaseB.priorAlphaRange,staircaseB.prior);axis square
+			end
+			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors BLACK')
+			if ana.logSlope
+				subplot(1,2,2);imagesc(10.^staircaseW.priorBetaRange,staircaseW.priorAlphaRange,staircaseW.prior); axis square
+			else
+				subplot(1,2,2);imagesc(staircaseW.priorBetaRange,staircaseW.priorAlphaRange,staircaseW.prior); axis square
+			end
+			ylabel('Threshold');xlabel('Slope');title('Initial Bayesian Priors WHITE')
 			drawnow;
 		end
 	end

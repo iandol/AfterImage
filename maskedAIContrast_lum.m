@@ -52,8 +52,8 @@ end
 NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
-XPos = [3 1.5 -1.5 -1.5 1.5 -3];
-YPos = [0 2.598 2.598 -2.598 -2.598 0];
+XPos = [3 1.5 -1.5 -1.5 1.5 -3] * 4 / 3;
+YPos = [0 2.598 2.598 -2.598 -2.598 0] * 4 / 3;
 
 saveMetaData();
 
@@ -256,7 +256,473 @@ try %our main experimental try catch loop
 				response = BREAKFIX;
 			end
 		else
-			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);try
+    n = 1;
+while n <= trials
+	if exitLoop; break; end  
+    
+	%%%%%%% initialise eyelink and draw fix spot %%%%%%%
+    if useEyeLink
+        resetFixation(eL);
+        trackerClearScreen(eL);
+%         trackerDrawStimuli(eL,ts);
+        trackerDrawFixation(eL); %draw fixation window on eyelink computer
+        edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
+        edfMessage(eL,['TRIALID ' num2str(n)]); ... %obj.getTaskIndex gives us which trial we're at
+       
+        startRecording(eL);
+        statusMessage(eL,'INITIATE FIXATION...');
+        fixated = '';
+        syncTime(eL);
+        while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
+            drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+            Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
+            tFix = Screen('Flip',sM.win); %flip the buffer
+            getSample(eL);
+            fixated=testSearchHoldFixation(eL,'fix','breakfix');
+        end
+        if strcmpi(fixated,'breakfix')
+            fprintf(' BREAK INIT FIXATION');
+            response = BREAKFIX;
+        end
+    else
+        drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+        tFix = Screen('Flip',sM.win); %flip the buffer
+%         WaitSecs(0.5);
+        fixated = 'fix';
+    end
+     %%%%%%% draw circle to show the location of stimulus %%%%%%%  
+      
+     Screen('FrameOval', win, 1, [maskDstRectsRand(1, n)+(masktexrect(3)-maskRadiusPix*2)/2-circelSizeWeight1, maskDstRectsRand(2, n)+(masktexrect(4)-maskRadiusPix*2)/2-circelSizeWeight1, ...
+         maskDstRectsRand(3, n)-(masktexrect(3)-maskRadiusPix*2)/2+circelSizeWeight1, maskDstRectsRand(4, n)-(masktexrect(4)-maskRadiusPix*2)/2+circelSizeWeight1]);
+     sM.drawCross();
+     sM.flip();
+     WaitSecs('YieldSecs', 0.5);
+
+     Screen('FillRect', win, 0.5);
+     sM.drawCross();
+     sM.flip;
+     WaitSecs('YieldSecs', 0.5);
+
+     fprintf('TRIAL:%i: staircase value = %.2f\n', n, staircase.xCurrent);
+
+     %%%%%%% draw fixed phase %%%%%%%
+     finishLoop = false;
+     while strcmp(fixated, 'fix') && finishLoop == false
+         if useEyeLink; edfMessage(eL,'END_FIX'); statusMessage(eL,'Show Stimulus...'); end
+        
+         currentTime = GetSecs;
+         nextTime = currentTime + ana.part1_duration;
+         vbl = currentTime;
+         while vbl < nextTime
+             Screen('DrawTextures', win, dotstex, [], dotDstRects, [], [], 1, dotColorMatrix, [], [], mydots);
+             if ana.foregroundMask
+                 Screen('DrawTextures', win, masktex, [], maskDstRectsRand(:, n), [], [], 1, [0.5, 0.5, 0.5, 1]', [], [], mymask);
+             end
+             sM.drawCross();
+             
+             [x1, y1] = RectCenterd(dotDstRects);
+             index_kill1 = find(((x1+initialSpeed(1)*cosd(initialDirection))-w)>0);
+             x1 = mod(x1+initialSpeed(1)*cosd(initialDirection), w);
+             y1 = mod(y1-initialSpeed(1)*sind(initialDirection), h);
+             y1(index_kill1) = h*rand(1,length(index_kill1)); %rand y of out_dots
+             dotDstRects = CenterRectOnPointd(inrect, x1, y1);
+             if useEyeLink
+                getSample(eL); %drawEyePosition(eL);
+                isfix = isFixated(eL);
+                if ~isfix
+                    fixated = 'breakfix';
+                    break
+                end
+            end
+             
+             vbl = Screen('Flip', win, vbl + halfisi);
+             
+         end
+         if useEyeLink && ~strcmpi(fixated,'fix')
+            response = BREAKFIX; finishLoop = true;
+            statusMessage(eL,'Subject Broke Fixation!');
+            edfMessage(eL,'MSG:BreakFix')
+            break
+        end
+         %%%%%%% draw test phase %%%%%%%
+         dotSpeedPerFrame = ((dotSpeedWeight*staircase.xCurrent)+dotSpeedMean)*pixelPerDeg*ifi; % pixel/frame
+         %mae_dir(n)= ana.dotDirection(dotDirectionMatrix(n));
+         
+         %=== Negative is left == 1 | Positive is right == 2
+         MAEDirection(n) = (dotSpeedPerFrame >= 0) + 1;
+         MAESpeed(n) = dotSpeedPerFrame/(pixelPerDeg*ifi);
+         fprintf('==Dot Speed is %.3f (%.3f), direction is %.2f\n',dotSpeedPerFrame,MAESpeed(n),MAEDirection(n));
+         
+         currentTime = GetSecs;
+         nextTime = currentTime + ana.stimulusDuration;
+         vbl = currentTime;
+         while vbl < nextTime
+             
+             Screen('DrawTextures', win, dotstex, [], dotDstRects, [], [], 1, dotColorMatrix, [], [], mydots);
+             if ana.foregroundMask
+                 Screen('DrawTextures', win, masktex, [], maskDstRectsRand(:, n), [], [], 1, [0.5, 0.5, 0.5, 1]', [], [], mymask);
+             end
+             sM.drawCross();
+             
+             [x, y] = RectCenterd(dotDstRects);
+             index_kill2 = find((x+dotSpeedPerFrame*cosd(0)-w)>0);
+             x = mod(x+dotSpeedPerFrame*cosd(0),w);
+             y = mod(y-dotSpeedPerFrame*sind(0),h);
+             y(index_kill2) = h*rand(1,length(index_kill2)); %rand y of out_dots
+             dotDstRects = CenterRectOnPointd(inrect, x, y);
+             
+            if useEyeLink
+                getSample(eL); %drawEyePosition(eL);
+                isfix = isFixated(eL);
+                if ~isfix
+                    fixated = 'breakfix';
+                    break
+                endtry
+    n = 1;
+while n <= trials
+	if exitLoop; break; end  
+    
+	%%%%%%% initialise eyelink and draw fix spot %%%%%%%
+    if useEyeLink
+        resetFixation(eL);
+        trackerClearScreen(eL);
+%         trackerDrawStimuli(eL,ts);
+        trackerDrawFixation(eL); %draw fixation window on eyelink computer
+        edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
+        edfMessage(eL,['TRIALID ' num2str(n)]); ... %obj.getTaskIndex gives us which trial we're at
+       
+        startRecording(eL);
+        statusMessage(eL,'INITIATE FIXATION...');
+        fixated = '';
+        syncTime(eL);
+        while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
+            drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+            Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
+            tFix = Screen('Flip',sM.win); %flip the buffer
+            getSample(eL);
+            fixated=testSearchHoldFixation(eL,'fix','breakfix');
+        end
+        if strcmpi(fixated,'breakfix')
+            fprintf(' BREAK INIT FIXATION');
+            response = BREAKFIX;
+        end
+    else
+        drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+        tFix = Screen('Flip',sM.win); %flip the buffer
+%         WaitSecs(0.5);
+        fixated = 'fix';
+    end
+     %%%%%%% draw circle to show the location of stimulus %%%%%%%  
+      
+     Screen('FrameOval', win, 1, [maskDstRectsRand(1, n)+(masktexrect(3)-maskRadiusPix*2)/2-circelSizeWeight1, maskDstRectsRand(2, n)+(masktexrect(4)-maskRadiusPix*2)/2-circelSizeWeight1, ...
+         maskDstRectsRand(3, n)-(masktexrect(3)-maskRadiusPix*2)/2+circelSizeWeight1, maskDstRectsRand(4, n)-(masktexrect(4)-maskRadiusPix*2)/2+circelSizeWeight1]);
+     sM.drawCross();
+     sM.flip();
+     WaitSecs('YieldSecs', 0.5);
+
+     Screen('FillRect', win, 0.5);
+     sM.drawCross();
+     sM.flip;
+     WaitSecs('YieldSecs', 0.5);
+
+     fprintf('TRIAL:%i: staircase value = %.2f\n', n, staircase.xCurrent);
+
+     %%%%%%% draw fixed phase %%%%%%%
+     finishLoop = false;
+     while strcmp(fixated, 'fix') && finishLoop == false
+         if useEyeLink; edfMessage(eL,'END_FIX'); statusMessage(eL,'Show Stimulus...'); end
+        
+         currentTime = GetSecs;
+         nextTime = currentTime + ana.part1_duration;
+         vbl = currentTime;
+         while vbl < nextTime
+             Screen('DrawTextures', win, dotstex, [], dotDstRects, [], [], 1, dotColorMatrix, [], [], mydots);
+             if ana.foregroundMask
+                 Screen('DrawTextures', win, masktex, [], maskDstRectsRand(:, n), [], [], 1, [0.5, 0.5, 0.5, 1]', [], [], mymask);
+             end
+             sM.drawCross();
+             
+             [x1, y1] = RectCenterd(dotDstRects);
+             index_kill1 = find(((x1+initialSpeed(1)*cosd(initialDirection))-w)>0);
+             x1 = mod(x1+initialSpeed(1)*cosd(initialDirection), w);
+             y1 = mod(y1-initialSpeed(1)*sind(initialDirection), h);
+             y1(index_kill1) = h*rand(1,length(index_kill1)); %rand y of out_dots
+             dotDstRects = CenterRectOnPointd(inrect, x1, y1);
+             if useEyeLink
+                getSample(eL); %drawEyePosition(eL);
+                isfix = isFixated(eL);
+                if ~isfix
+                    fixated = 'breakfix';
+                    break
+                end
+            end
+             
+             vbl = Screen('Flip', win, vbl + halfisi);
+             
+         end
+         if useEyeLink && ~strcmpi(fixated,'fix')
+            response = BREAKFIX; finishLoop = true;
+            statusMessage(eL,'Subject Broke Fixation!');
+            edfMessage(eL,'MSG:BreakFix')
+            break
+        end
+         %%%%%%% draw test phase %%%%%%%
+         dotSpeedPerFrame = ((dotSpeedWeight*staircase.xCurrent)+dotSpeedMean)*pixelPerDeg*ifi; % pixel/frame
+         %mae_dir(n)= ana.dotDirection(dotDirectionMatrix(n));
+         
+         %=== Negative is left == 1 | Positive is right == 2
+         MAEDirection(n) = (dotSpeedPerFrame >= 0) + 1;
+         MAESpeed(n) = dotSpeedPerFrame/(pixelPerDeg*ifi);
+         fprintf('==Dot Speed is %.3f (%.3f), direction is %.2f\n',dotSpeedPerFrame,MAESpeed(n),MAEDirection(n));
+         
+         currentTime = GetSecs;
+         nextTime = currentTime + ana.stimulusDuration;
+         vbl = currentTime;
+         while vbl < nextTime
+             
+             Screen('DrawTextures', win, dotstex, [], dotDstRects, [], [], 1, dotColorMatrix, [], [], mydots);
+             if ana.foregroundMask
+                 Screen('DrawTextures', win, masktex, [], maskDstRectsRand(:, n), [], [], 1, [0.5, 0.5, 0.5, 1]', [], [], mymask);
+             end
+             sM.drawCross();
+             
+             [x, y] = RectCenterd(dotDstRects);
+             index_kill2 = find((x+dotSpeedPerFrame*cosd(0)-w)>0);
+             x = mod(x+dotSpeedPerFrame*cosd(0),w);
+             y = mod(y-dotSpeedPerFrame*sind(0),h);
+             y(index_kill2) = h*rand(1,length(index_kill2)); %rand y of out_dots
+             dotDstRects = CenterRectOnPointd(inrect, x, y);
+             
+            if useEyeLink
+                getSample(eL); %drawEyePosition(eL);
+                isfix = isFixated(eL);
+                if ~isfix
+                    fixated = 'breakfix';
+                    break
+                end
+            end
+             vbl = Screen('Flip', win, vbl + halfisi);
+             
+         end
+        if useEyeLink && ~strcmpi(fixated,'fix')
+            response = BREAKFIX; finishLoop = true;
+            statusMessage(eL,'Subject Broke Fixation!');
+            edfMessage(eL,'MSG:BreakFix')
+            break
+        end
+    
+	%%%%%%%%% GET Result %%%%%%%%%%%
+        Screen('FillRect', win, 0.5);
+        sM.drawCross();
+        sM.flip();
+        WaitSecs('YieldSecs',0.5);
+        if ana.dotDirection(dotDirectionMatrix(n)) == 0 || ana.dotDirection(dotDirectionMatrix(n)) == 180
+            imageTexture = imread('choice_plane_LR.jpg');
+        elseif ana.dotDirection(dotDirectionMatrix(n)) == 90 || ana.dotDirection(dotDirectionMatrix(n)) == 270
+            imageTexture = imread('choice_plane_UD.jpg');
+        end
+        imageID = Screen('MakeTexture', win, imageTexture);
+        Screen('DrawTexture', win, imageID, [], sM.winRect);
+        Screen('Flip', win);
+        
+        if useEyeLink
+            statusMessage(eL,'Waiting for Subject Response!');
+            edfMessage(eL,'Subject Responding')
+            edfMessage(eL,'END_RT'); ...
+        end
+        finishLoop = true;
+     end
+    if response ~= BREAKFIX
+        [~, keyCode, ~] = KbWait;
+        if keyCode(leftKey) == 1
+            Response(n) = 1;
+        elseif keyCode(rightKey) == 1
+            Response(n) = 2;
+        elseif keyCode(upKey) == 1
+            Response(n) = 1;
+        elseif keyCode(downKey) == 1
+            Response(n) = 2;
+        elseif keyCode(escKey) == 1
+            exitLoop = true;
+            break
+        end
+    end
+	Screen('FillRect', win, 0.5);
+	sM.flip();
+	WaitSecs('YieldSecs', ana.ITI);
+
+% 	thisResponse = Response(n) == MAEDirection(n);
+	thisResponse = Response(n) == 2;
+	
+	fprintf('====Subject response %i, means this trial response was: %i\n\n',Response(n), thisResponse);
+
+	staircase = PAL_AMPM_updatePM(staircase, thisResponse);
+
+	plotResults();
+    if useEyeLink
+        resetFixation(eL); trackerClearScreen(eL);
+        stopRecording(eL);
+        edfMessage(eL,['TRIAL_RESULT ' num2str(Response(n))]);
+        setOffline(eL);
+    end
+%     drawBackground(sM);
+%     Screen('Flip',sM.win); %flip the buffer
+%     WaitSecs(0.5);
+ if response ~= BREAKFIX;n = n + 1;end  %
+    
+   response = 1;
+end
+
+%-----Cleanup
+	Screen('Flip',sM.win);
+	Priority(0); ListenChar(0); ShowCursor;
+	close(sM); %close screen
+	p=uigetdir(pwd,'Select Directory to Save Data, CANCEL to not save.');
+	if ischar(p)
+		cd(p);
+		
+		if ~useEyeLink; eL = []; end
+		save([ana.nameExp '.mat'], 'ana', 'Response','staircase', 'sM','eL','MAEDirection','MAESpeed');
+		disp(['=====SAVE, saved current data to: ' pwd]);
+	else
+		if useEyeLink; eL.saveFile = ''; end %blank save file so it doesn't save
+	end
+	if useEyeLink == true; close(eL); end
+% 	reset(stimuli); %reset our stimulus ready for use again
+
+
+% if ~exitLoop
+% 	fileName = strcat('MAE_tasks', datestr(now, 'yyyy-mm-dd-HH-MM-SS'), '.mat');
+% 	save(fileName, 'Response', 'ana', 'staircase','MAEDirection','MAESpeed');
+% end
+
+% sM.close();
+% sca;
+% Screen('CloseAll');
+catch ME
+	ple(ME)
+	close(sM); %close screen
+	Priority(0); ListenChar(0); ShowCursor;
+	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
+	save([ana.nameExp 'CRASH.mat'], 'ana', 'Response','staircase', 'sM','eL','MAEDirection','MAESpeed')
+	if useEyeLink == true; eL.saveFile = [ana.nameExp 'CRASH.edf']; close(eL); end
+% 	reset(stimuli);
+% 	clear stimuli task taskB taskW md eL s
+    clear eL s
+	rethrow(ME);
+end
+            end
+             vbl = Screen('Flip', win, vbl + halfisi);
+             
+         end
+        if useEyeLink && ~strcmpi(fixated,'fix')
+            response = BREAKFIX; finishLoop = true;
+            statusMessage(eL,'Subject Broke Fixation!');
+            edfMessage(eL,'MSG:BreakFix')
+            break
+        end
+    
+	%%%%%%%%% GET Result %%%%%%%%%%%
+        Screen('FillRect', win, 0.5);
+        sM.drawCross();
+        sM.flip();
+        WaitSecs('YieldSecs',0.5);
+        if ana.dotDirection(dotDirectionMatrix(n)) == 0 || ana.dotDirection(dotDirectionMatrix(n)) == 180
+            imageTexture = imread('choice_plane_LR.jpg');
+        elseif ana.dotDirection(dotDirectionMatrix(n)) == 90 || ana.dotDirection(dotDirectionMatrix(n)) == 270
+            imageTexture = imread('choice_plane_UD.jpg');
+        end
+        imageID = Screen('MakeTexture', win, imageTexture);
+        Screen('DrawTexture', win, imageID, [], sM.winRect);
+        Screen('Flip', win);
+        
+        if useEyeLink
+            statusMessage(eL,'Waiting for Subject Response!');
+            edfMessage(eL,'Subject Responding')
+            edfMessage(eL,'END_RT'); ...
+        end
+        finishLoop = true;
+     end
+    if response ~= BREAKFIX
+        [~, keyCode, ~] = KbWait;
+        if keyCode(leftKey) == 1
+            Response(n) = 1;
+        elseif keyCode(rightKey) == 1
+            Response(n) = 2;
+        elseif keyCode(upKey) == 1
+            Response(n) = 1;
+        elseif keyCode(downKey) == 1
+            Response(n) = 2;
+        elseif keyCode(escKey) == 1
+            exitLoop = true;
+            break
+        end
+    end
+	Screen('FillRect', win, 0.5);
+	sM.flip();
+	WaitSecs('YieldSecs', ana.ITI);
+
+% 	thisResponse = Response(n) == MAEDirection(n);
+	thisResponse = Response(n) == 2;
+	
+	fprintf('====Subject response %i, means this trial response was: %i\n\n',Response(n), thisResponse);
+
+	staircase = PAL_AMPM_updatePM(staircase, thisResponse);
+
+	plotResults();
+    if useEyeLink
+        resetFixation(eL); trackerClearScreen(eL);
+        stopRecording(eL);
+        edfMessage(eL,['TRIAL_RESULT ' num2str(Response(n))]);
+        setOffline(eL);
+    end
+%     drawBackground(sM);
+%     Screen('Flip',sM.win); %flip the buffer
+%     WaitSecs(0.5);
+ if response ~= BREAKFIX;n = n + 1;end  %
+    
+   response = 1;
+end
+
+%-----Cleanup
+	Screen('Flip',sM.win);
+	Priority(0); ListenChar(0); ShowCursor;
+	close(sM); %close screen
+	p=uigetdir(pwd,'Select Directory to Save Data, CANCEL to not save.');
+	if ischar(p)
+		cd(p);
+		
+		if ~useEyeLink; eL = []; end
+		save([ana.nameExp '.mat'], 'ana', 'Response','staircase', 'sM','eL','MAEDirection','MAESpeed');
+		disp(['=====SAVE, saved current data to: ' pwd]);
+	else
+		if useEyeLink; eL.saveFile = ''; end %blank save file so it doesn't save
+	end
+	if useEyeLink == true; close(eL); end
+% 	reset(stimuli); %reset our stimulus ready for use again
+
+
+% if ~exitLoop
+% 	fileName = strcat('MAE_tasks', datestr(now, 'yyyy-mm-dd-HH-MM-SS'), '.mat');
+% 	save(fileName, 'Response', 'ana', 'staircase','MAEDirection','MAESpeed');
+% end
+
+% sM.close();
+% sca;
+% Screen('CloseAll');
+catch ME
+	ple(ME)
+	close(sM); %close screen
+	Priority(0); ListenChar(0); ShowCursor;
+	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
+	save([ana.nameExp 'CRASH.mat'], 'ana', 'Response','staircase', 'sM','eL','MAEDirection','MAESpeed')
+	if useEyeLink == true; eL.saveFile = [ana.nameExp 'CRASH.edf']; close(eL); end
+% 	reset(stimuli);
+% 	clear stimuli task taskB taskW md eL s
+    clear eL s
+	rethrow(ME);
+end
 			tFix = Screen('Flip',sM.win); %flip the buffer
 			WaitSecs(0.5);
 			fixated = 'fix';
