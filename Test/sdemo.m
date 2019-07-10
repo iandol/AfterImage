@@ -52,7 +52,7 @@ texrect = Screen('Rect', disctexture);
 myrect = CenterRect(texrect,winRect);
 
 %% Set up up/down procedure:
-PF = @PAL_Gumbel;
+PF = @PAL_Gumbel; % the psychometric function to use
 up = 1;                     %increase after 1 wrong
 down = 3;                   %decrease after 3 consecutive right
 StepSizeDown = 0.05;

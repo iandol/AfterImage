@@ -17,7 +17,7 @@ grey = white / 2;
 black = BlackIndex(screenNumber);
 
 % Open the screen
-[window, windowRect] = PsychImaging('OpenWindow', screenNumber, grey, [0 0 600 600], 32, 2,...
+[window, windowRect] = PsychImaging('OpenWindow', screenNumber, grey, [0 0 800 800], 32, 2,...
     [], [],  kPsychNeed32BPCFloat);
 
 % Flip to clear
@@ -40,7 +40,7 @@ topPriorityLevel = MaxPriority(window);
 %--------------------
 
 % Dimension of the region where will draw the Gabor in pixels
-gaborDimPix = 300;
+gaborDimPix = 200;
 
 % Sigma of Gaussian
 sigma = gaborDimPix / 7;
@@ -62,7 +62,7 @@ gabortex = CreateProceduralGabor(window, gaborDimPix, gaborDimPix, [],...
 % We will be displaying our Gabors either above or below fixation by 250
 % pixels. We therefore have to determine these two locations in screen
 % coordianates.
-pixShift = 250;
+pixShift = 100;
 xPos = [xCenter xCenter];
 yPos = [yCenter - pixShift yCenter + pixShift];
 
@@ -88,14 +88,14 @@ propertiesMat(:, 1) = phaseLine';
 % will mean we test between -(1.8 / 2) and +(1.8 / 2). Finally we will test
 % seven points linearly spaced between these extremes.
 baseOrientation = 0;
-orRange = 1.9;
+orRange = 5;
 numSteps = 7;
 stimValues = linspace(-orRange / 2, orRange / 2, numSteps) + baseOrientation;
 
 % Now we set the number of times we want to do each condition, then make a
 % full condition vector and then shuffle it. This will randomly order the
 % orientation we present our Gabor with on each trial.
-numRepeats = 15;
+numRepeats = 5;
 condVector = Shuffle(repmat(stimValues, 1, numRepeats));
 
 % Calculate the number of trials
@@ -147,7 +147,7 @@ for trial = 1:numTrials
     % Get the Gabor angle for this trial (negative values are to the right
     % and positive to the left)
     theAngle = condVector(trial);
-
+	disp(['Trial: ' num2str(trial) '/' num2str(numTrials) ' | Value: ' num2str(theAngle)])
     % Randomise the side which the Gabor is displayed on
     side = round(rand) + 1;
     thisDstRect = allRects(:, side);
@@ -159,7 +159,7 @@ for trial = 1:numTrials
     % If this is the first trial we present a start screen and wait for a
     % key-press
     if trial == 1
-        DrawFormattedText(window, 'Press Any Key To Begin', 'center', 'center', black);
+        DrawFormattedText(window, 'Press Any Key To Begin', 'top', 'center', black);
         Screen('Flip', window);
         KbStrokeWait;
     end
