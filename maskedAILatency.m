@@ -53,8 +53,10 @@ end
 NOSEE = 1; 	YESSEE = 2; UNSURE = 4; BREAKFIX = -1;
 
 %-----------------------Positions to move stimuli
-XPos = [3 1.5 -1.5 -1.5 1.5 -3];
-YPos = [0 2.598 2.598 -2.598 -2.598 0];
+XPos = [3 1.5 -1.5 -1.5 1.5 -3] * 3 / 3;
+YPos = [0 2.598 2.598 -2.598 -2.598 0] * 3 / 3;
+if ana.discSize <= 1;  XPos =  2/3*XPos; YPos =  2/3*YPos;   end
+if ana.discSize >= 4;  XPos =  4/3*XPos; YPos =  4/3*YPos;   end
 
 saveMetaData();
 
@@ -411,11 +413,12 @@ try %our main experimental try catch loop
 			
 		tEnd = GetSecs;
 		ListenChar(0);
-		
-		resetFixation(eL); trackerClearScreen(eL);
-		stopRecording(eL);
-		edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);
-		setOffline(eL);
+		if useEyeLink
+			resetFixation(eL); trackerClearScreen(eL);
+			stopRecording(eL);
+			edfMessage(eL,['TRIAL_RESULT ' num2str(response)]);
+			setOffline(eL);
+		end
 		drawBackground(sM);
 		Screen('Flip',sM.win); %flip the buffer
 		WaitSecs(0.5);
@@ -429,6 +432,7 @@ try %our main experimental try catch loop
 		cd(p);
 		response = task.response;
 		responseInfo = task.responseInfo;
+		if ~useEyeLink; eL = []; end
 		save([ana.nameExp '.mat'], 'ana', 'response', 'responseInfo', 'task',...
 			'taskB', 'taskW', 'staircaseB', 'staircaseW', 'sM',...
 			'stimuli', 'eL');
@@ -443,6 +447,7 @@ catch ME
 	close(sM); %close screen
 	Priority(0); ListenChar(0); ShowCursor;
 	disp(['!!!!!!!!=====CRASH, save current data to: ' pwd]);
+	if ~useEyeLink; eL = []; end
 	save([ana.nameExp 'CRASH.mat'], 'task', 'taskB', 'taskW',...
 		'staircaseB', 'staircaseW', 'ana', 'sM', 'stimuli', 'eL', 'ME')
 	ple(ME)
@@ -466,6 +471,7 @@ end
 			responseInfo.whiteN = taskW.thisRun;
 			responseInfo.redo = responseRedo;
 			updateTask(task,response,tEnd,responseInfo)
+			task.thisRun = taskB.thisRun+taskW.thisRun;
 			if ana.useStaircase == true
 				if colourOut == 0
 					if response == NOSEE 

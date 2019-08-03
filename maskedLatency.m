@@ -73,7 +73,7 @@ m.mask = true;
 m.density = 1000;
 m.coherence = 0;
 m.size = st.size+1;
-m.speed=0.5;
+m.speed= 0.2;
 m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
 m.size = st.size+1;
@@ -190,6 +190,7 @@ try %our main experimental try catch loop
 	fixated = 'no';
 	response = NaN;
 	responseRedo = 0; %number of trials the subject was unsure and redid (left arrow)
+	Priority(MaxPriority(sM.win));
 	
 	while ~breakloop && task.thisRun <= task.nRuns
 		%-----setup our values and print some info for the trial
@@ -226,7 +227,6 @@ try %our main experimental try catch loop
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
-		Priority(MaxPriority(sM.win));
 		posloop = posloop + 1;
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();
@@ -347,9 +347,9 @@ try %our main experimental try catch loop
 			ListenChar(2);
 			[secs, keyCode] = KbWait(-1);
 			rchar = KbName(keyCode);
-% 		while ~breakloopkey			
+%			while ~breakloopkey			
 % 			if keyIsDown == 1
-				if iscell(rchar);rchar=rchar{1};end
+			if iscell(rchar);rchar=rchar{1};end
 				switch lower(rchar)
 					case {'leftarrow','left'}
 						response = YESSEE;
