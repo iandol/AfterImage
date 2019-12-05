@@ -186,6 +186,7 @@ end
 try %our main experimental try catch loop
 %=====================================================================
 	
+	Priority(MaxPriority(sM.win));
 	loop = 1;
 	posloop = 1;
 	breakloop = false;
@@ -228,7 +229,6 @@ try %our main experimental try catch loop
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
-		Priority(MaxPriority(sM.win));
 		posloop = posloop + 1;
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();

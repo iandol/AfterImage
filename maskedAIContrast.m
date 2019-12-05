@@ -8,6 +8,7 @@ KbName('UnifyKeyNames');
 ana.date = datestr(datetime);
 ana.version = Screen('Version');
 ana.computer = Screen('Computer');
+fprintf('\n--->>> maskedAIContrast Started: ana UUID = %s!\n',ana.uuid);
 
 %===================experiment parameters===================
 if ana.debug
@@ -77,7 +78,7 @@ m.size = st.size+1;
 m.speed=0.5;
 m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
-m.size = st.size;
+m.size = st.size+1;
 
 %----------combine them into a single meta stimulus------------------
 stimuli = metaStimulus();
@@ -186,6 +187,7 @@ clc
 try %our main experimental try catch loop
 	%=====================================================================
 	
+	Priority(MaxPriority(sM.win));
 	loop = 1;
 	posloop = 1;
 	breakloop = false;
@@ -227,7 +229,6 @@ try %our main experimental try catch loop
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		fprintf('\n==>># %i: Pedestal = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
-		Priority(MaxPriority(sM.win));
 		posloop = posloop + 1;
 		stimuli.update();
 		stimuli.maskStimuli{1}.update();
@@ -239,10 +240,10 @@ try %our main experimental try catch loop
 			trackerDrawStimuli(eL,ts);
 			trackerDrawFixation(eL); %draw fixation window on eyelink computer
 			edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
-			edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
-			edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
-			edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
-			startRecording(eL);
+				edfMessage(eL,['TRIALID ' num2str(task.thisRun)]); ... %obj.getTaskIndex gives us which trial we're at
+				edfMessage(eL,['MSG:PEDESTAL ' num2str(pedestal)]); ... %add in the pedestal of the current state for good measure
+				edfMessage(eL,['MSG:CONTRAST ' num2str(colourOut)]); ... %add in the pedestal of the current state for good measure
+				startRecording(eL);
 			statusMessage(eL,'INITIATE FIXATION...');
 			fixated = '';
 			syncTime(eL);
@@ -339,7 +340,7 @@ try %our main experimental try catch loop
 				edfMessage(eL,'Subject Responding')
 				edfMessage(eL,'END_RT'); ...
 			end
-			finishLoop = true;
+		finishLoop = true;
 		end
 		
 		%-----check keyboard
@@ -483,17 +484,17 @@ end
 					else if response == NOSEE
 							yesnoresponse = 0.5;
 						else
-						yesnoresponse = 1;
+							yesnoresponse = 1;
 						end
 					end
 					
 					suspend = 0; AvoidConsecutive=1;
-% 					if staircaseB.xCurrent >= 0.35 && AvoidConsecutive
-% 						suspend = 1;
-% 					end
-% 					if suspend == 1
-% 						suspend = rand(1) > 1./9;
-% 					end
+					% 					if staircaseB.xCurrent >= 0.35 && AvoidConsecutive
+					% 						suspend = 1;
+					% 					end
+					% 					if suspend == 1
+					% 						suspend = rand(1) > 1./9;
+					% 					end
 					staircaseB = PAL_AMPM_updatePM(staircaseB, yesnoresponse,'fixLapse',suspend);
 				elseif colourOut == 0.5 + ana.stimulusCon
 					if response == YESDARK
@@ -586,7 +587,7 @@ end
 		
 		if ana.useStaircase == true
 			scaleM = 200;
-            tit = ''; tit2 = '';
+			tit = ''; tit2 = '';
 			cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
 			if ~isempty(staircaseB.threshold)
 				rB = linspace(min(staircaseB.stimRange),max(staircaseB.stimRange),200);
@@ -653,7 +654,7 @@ end
 			hold(ana.plotAxis2, 'off');
 			
 			%=========================plot posteriors
-			cla(ana.plotAxis3); 
+			cla(ana.plotAxis3);
 			pos = PAL_Scale0to1(staircaseB.pdf(:,:,1,1));
 			if ana.logSlope
 				x = 10.^staircaseB.priorBetaRange;
@@ -665,7 +666,7 @@ end
 			xlabel(ana.plotAxis3, 'Beta \beta');
 			ylabel(ana.plotAxis3, 'Alpha \alpha');
 			title(ana.plotAxis3, 'Black Posterior');
-			cla(ana.plotAxis4); 
+			cla(ana.plotAxis4);
 			pos = PAL_Scale0to1(staircaseW.pdf(:,:,1,1));
 			if ana.logSlope
 				x = 10.^staircaseW.priorBetaRange;
@@ -678,39 +679,39 @@ end
 			ylabel(ana.plotAxis4, 'Alpha \alpha');
 			title(ana.plotAxis4, 'White Posterior');
 		else
-% 			NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3;
-if task.thisRun > 5
-	cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
-	uniPed = unique(ped);
-	pedW = ped(idxW); pedB = ped(idxB);
-	resW = task.response(idxW); resB = task.response(idxB);
-	temp = find(resW==1); resW(temp)=0.5;
-	temp = find(resW==2); resW(temp)=1;
-	temp = find(resW==3); resW(temp)=0;
-	temp = find(resB==1); resB(temp)=0.5;
-	temp = find(resB==2); resB(temp)=0;
-	temp = find(resB==3); resB(temp)=1;
-	uniPedW = unique(pedW); uniPedB = unique(pedB);
-	for i = 1:length(uniPedB)
-		plotB(i,1) = 0.5-uniPedB(i);
-		temp = find(pedB == uniPedB(i));
-		plotB(i,2) = nanmean(resB(temp));
-	end
-	for i = 1:length(uniPedW)
-		plotW(i,1) = uniPedW(i)-0.5;
-		temp = find(pedW == uniPedW(i));
-		plotW(i,2) = nanmean(resW(temp));
-	end
-	plot(ana.plotAxis2,plotB(:,1), plotB(:,2),'r^','MarkerFaceColor','w','MarkerSize',10);
-	plot(ana.plotAxis2,plotW(:,1), plotW(:,2),'bv','MarkerFaceColor','w','MarkerSize',10);
-	
-	box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
-	ylim(ana.plotAxis2, [0 1]);
-	xlim(ana.plotAxis2, [0 0.5]);
-	xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
-	ylabel(ana.plotAxis2, 'Responses');
-	hold(ana.plotAxis2, 'off');
-end
+			% 			NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3;
+			if task.thisRun > 5
+				cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
+				uniPed = unique(ped);
+				pedW = ped(idxW); pedB = ped(idxB);
+				resW = task.response(idxW); resB = task.response(idxB);
+				temp = find(resW==1); resW(temp)=0.5;
+				temp = find(resW==2); resW(temp)=1;
+				temp = find(resW==3); resW(temp)=0;
+				temp = find(resB==1); resB(temp)=0.5;
+				temp = find(resB==2); resB(temp)=0;
+				temp = find(resB==3); resB(temp)=1;
+				uniPedW = unique(pedW); uniPedB = unique(pedB);
+				for i = 1:length(uniPedB)
+					plotB(i,1) = 0.5-uniPedB(i);
+					temp = find(pedB == uniPedB(i));
+					plotB(i,2) = nanmean(resB(temp));
+				end
+				for i = 1:length(uniPedW)
+					plotW(i,1) = uniPedW(i)-0.5;
+					temp = find(pedW == uniPedW(i));
+					plotW(i,2) = nanmean(resW(temp));
+				end
+				plot(ana.plotAxis2,plotB(:,1), plotB(:,2),'r^','MarkerFaceColor','w','MarkerSize',10);
+				plot(ana.plotAxis2,plotW(:,1), plotW(:,2),'bv','MarkerFaceColor','w','MarkerSize',10);
+				
+				box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
+				ylim(ana.plotAxis2, [0 1]);
+				xlim(ana.plotAxis2, [0 0.5]);
+				xlabel(ana.plotAxis2, 'Contrast (red=BLACK blue=WHITE)');
+				ylabel(ana.plotAxis2, 'Responses');
+				hold(ana.plotAxis2, 'off');
+			end
 		end
 		drawnow;
 	end
