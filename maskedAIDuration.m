@@ -230,7 +230,7 @@ try %our main experimental try catch loop
 			fixated = '';
 			syncTime(eL);
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
-				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+				drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 				tFix = Screen('Flip',sM.win); %flip the buffer
 				getSample(eL);
@@ -241,7 +241,7 @@ try %our main experimental try catch loop
 				response = BREAKFIX;
 			end
 		else
-			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+			drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);%[0.5 0.5 0.5 0.5]
 			tFix = Screen('Flip',sM.win); %flip the buffer
 			WaitSecs(0.5);
 			fixated = 'fix';
@@ -258,7 +258,7 @@ try %our main experimental try catch loop
 			tStim = GetSecs; vbl = tStim;
 			while vbl <= tStim + ana.stimulusTime
 				draw(stimuli); %draw stimulus
-				drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+				drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 				if useEyeLink
 					getSample(eL); %drawEyePosition(eL);
@@ -286,7 +286,7 @@ try %our main experimental try catch loop
 			%=====================RESPONSE
 			drawBackground(sM);
 			Screen('DrawText',sM.win,['When you see nothing, press: [DOWN]=DISAPPEAR [RIGHT]=SHOW AGAIN'],0,0);
-			drawCross(sM,0.4,[1 1 1 1],ana.fixX,ana.fixY);
+			drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);
 			Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
 			
 			tMaskOff = Screen('Flip',sM.win);
