@@ -55,8 +55,8 @@ NOSEE = 1; 	YESBRIGHT = 2; YESDARK = 3; UNSURE = 4; BREAKFIX = -1;
 %-----------------------Positions to move stimuli
 XPos = [3 1.5 -1.5 -1.5 1.5 -3] * 3 / 3;
 YPos = [0 2.598 2.598 -2.598 -2.598 0] * 3 / 3;
-if ana.discSize <= 1;  XPos =  2/3*XPos; YPos =  2/3*YPos;   end
-if ana.discSize >= 4;  XPos =  4/3*XPos; YPos =  4/3*YPos;   end
+% if ana.discSize <= 1;  XPos =  2/3*XPos; YPos =  2/3*YPos;   end
+% if ana.discSize >= 4;  XPos =  3/3*XPos; YPos =  3/3*YPos;   end
 
 saveMetaData();
 
@@ -78,7 +78,6 @@ m.size = st.size+1;
 m.speed=0.5;
 m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
-m.size = st.size+1;
 
 %----------combine them into a single meta stimulus------------------
 stimuli = metaStimulus();

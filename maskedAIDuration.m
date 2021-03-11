@@ -194,8 +194,8 @@ try %our main experimental try catch loop
 		stimuli{1}.sizeOut = pedestal;
 		stimuli{1}.sigmaOut = ana.sigma;
 		
-		if pedestal <= 1;  XPos =  2/3*XPos1; YPos =  2/3*YPos1;   end 
-        if pedestal >= 4;  XPos =  4/3*XPos1; YPos =  4/3*YPos1;   end 
+% 		if pedestal <= 1;  XPos =  2/3*XPos1; YPos =  2/3*YPos1;   end 
+%         if pedestal >= 4;  XPos =  4/3*XPos1; YPos =  4/3*YPos1;   end 
         
 		if posloop > 6; posloop = 1; end
 		stimuli{1}.xPositionOut = XPos(posloop);

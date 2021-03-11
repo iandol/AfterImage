@@ -1,4 +1,4 @@
-function maskedAILatency(ana)
+function maskedAIPerceptualSize(ana)
 
 %----------compatibility for windows
 %if ispc; PsychJavaTrouble(); end
@@ -62,19 +62,26 @@ saveMetaData();
 
 %======================================================stimulus objects
 %---------------------main disc (stimulus and pedestal).
-st = discStimulus();
+st = discStimulus(); 
 st.name = ['STIM_' ana.nameExp];
 st.xPosition = XPos(1);
 st.colour = [1 1 1 1];
 st.size = ana.discSize;
-st.sigma = ana.sigma;
+st.sigma = 0;
+
+st2 = discStimulus();     % dot 0.1 deg
+st2.name = ['STIM2_' ana.nameExp];
+st2.xPosition = XPos(1);
+st2.colour = [0 0 0 1];
+st2.size = 1;
+st2.sigma = 0;
 
 %-----mask stimulus
 m = dotsStimulus();
 m.mask = true;
 m.density = 1000;
 m.coherence = 0;
-m.size = st.size+1.5;
+m.size = st.size+1;
 m.speed=0.5;
 m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
@@ -86,7 +93,9 @@ stimuli.name = ana.nameExp;
 sidx = 1;
 maskidx = 1;
 stimuli{sidx} = st;
+stimuli{2} = st2;
 stimuli.maskStimuli{maskidx} = m;
+stimuli.maskStimuli{2} = m;
 stimuli.showMask = false;
 %======================================================stimulus objects
 
@@ -221,11 +230,20 @@ try %our main experimental try catch loop
 		stimuli.maskStimuli{1}.yPositionOut = YPos(posloop);
 		stimuli{1}.colourOut = colourOut;  % addd by xu
 		
-		ts.x = XPos(posloop);
-		ts.y = YPos(posloop);
-		ts.size = stimuli{1}.size;
-		ts.selected = true;
+	    stimuli{2}.xPositionOut = stimuli{1}.xPositionOut;
+		stimuli{2}.yPositionOut = stimuli{1}.yPositionOut;
+		stimuli.maskStimuli{2}.xPositionOut = XPos(posloop);
+		stimuli.maskStimuli{2}.yPositionOut = YPos(posloop);
+		stimuli{2}.colourOut = 1-colourOut
 		
+		ts(1).x = XPos(posloop);
+		ts(1).y = YPos(posloop);
+		ts(1).selected = true;
+		ts(2).x = XPos(posloop);
+		ts(2).y = YPos(posloop);
+		ts(2).selected = true;
+		
+
 		%save([tempdir filesep nameExp '.mat'],'task','taskB','taskW');
 		fprintf('\n===>>>START %i: PEDESTAL = %.3g | Colour = %.3g | ',task.thisRun,pedestal,colourOut);
 		
@@ -298,7 +316,7 @@ try %our main experimental try catch loop
 			%====================PEDESTAL
 			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
-			while GetSecs <= tPedestal + pedestal
+			while GetSecs <= tPedestal  % pedestal appear after stimulus turned off
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw

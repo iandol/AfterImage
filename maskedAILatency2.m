@@ -74,7 +74,7 @@ m = dotsStimulus();
 m.mask = true;
 m.density = 1000;
 m.coherence = 0;
-m.size = st.size+1.5;
+m.size = st.size+1;
 m.speed=0.5;
 m.name = ['MASK_' ana.nameExp];
 m.xPosition = st.xPosition;
@@ -214,6 +214,11 @@ try %our main experimental try catch loop
 			end
 		end
 		
+			
+		stimuli{1}.sizeOut = pedestal;
+		stimuli{1}.sigmaOut = ana.sigma;
+		
+		
 		if posloop > 6; posloop = 1; end
 		stimuli{1}.xPositionOut = XPos(posloop);
 		stimuli{1}.yPositionOut = YPos(posloop);
@@ -298,7 +303,7 @@ try %our main experimental try catch loop
 			%====================PEDESTAL
 			stimuli{1}.colourOut = 0.5;
 			tPedestal=GetSecs;
-			while GetSecs <= tPedestal + pedestal
+			while GetSecs <= tPedestal + 0.05
 				draw(stimuli); %draw stimulus
 				drawCross(sM,0.4,[0 0 0 0],ana.fixX,ana.fixY);
 				Screen('DrawingFinished', sM.win); %tell PTB/GPU to draw
@@ -519,89 +524,40 @@ end
 	function doPlot()
 		ListenChar(0);
 				
-		x = 1:length(task.response);
+
 		info = cell2mat(task.responseInfo);
 		ped = [info.pedestal];
-		
-		idxW = [info.contrastOut] == 1;
-		idxB = [info.contrastOut] == 0;
+		temp = info.response;
+		for i = 1:length(task.response);
+		x(1,i) =  find(ana.pedestalRange == ped(1,i));
+		lat(1,i) = temp;
+        end
+% 		dura = ana.duration;
+		idxW = [info.contrastOut] ==  0.5 + ana.stimulusCon;
+		idxB = [info.contrastOut] ==  0.5 - ana.stimulusCon;
 		
 		idxNO = task.response == NOSEE;
 		idxYESSEE = task.response == YESSEE;
 
-		cla(ana.plotAxis1); line(ana.plotAxis1,[0 max(x)+1],[0.5 0.5],'LineStyle','--','LineWidth',2); hold(ana.plotAxis1,'on')
-		plot(ana.plotAxis1,x(idxNO & idxB), ped(idxNO & idxB),'ro','MarkerFaceColor','r','MarkerSize',8);
-		plot(ana.plotAxis1,x(idxNO & idxW), ped(idxNO & idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
-		plot(ana.plotAxis1,x(idxYESSEE & idxB), ped(idxYESSEE & idxB),'rv','MarkerFaceColor','w','MarkerSize',8);
-		plot(ana.plotAxis1,x(idxYESSEE & idxW), ped(idxYESSEE & idxW),'bv','MarkerFaceColor','w','MarkerSize',8);
+		cla(ana.plotAxis1);  
+		plot(ana.plotAxis1, x(idxB), lat(idxB),'ro','MarkerFaceColor','r','MarkerSize',8); hold(ana.plotAxis1,'on')
+		plot(ana.plotAxis1, x(idxW), lat(idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
 
+% 		info = cell2mat(task.responseInfo);
+% 		ped = [info.pedestal];%responseInfo.pedestal;
+%         for i = 1:length(task.response);
+% 		x(1,i) =  find(ana.pedestalRange == ped(1,i));
+%         end
+%         
+%           
+%         cla(ana.plotAxis1);      	
+% 		
+% 		plot(ana.plotAxis1, x(idxB), dura(idxB),'ro','MarkerFaceColor','r','MarkerSize',8); hold(ana.plotAxis1,'on')
+% 		plot(ana.plotAxis1, x(idxW), dura(idxW),'bo','MarkerFaceColor','b','MarkerSize',8);
 		
-		if length(task.response) > 4
-			try %#ok<TRYNC>
-				idx = idxNO & idxB;
-				blackPedestal = ped(idx);
-				[bAvg, bErr] = stderr(blackPedestal);
-				idx = idxNO & idxW;
-				whitePedestal = ped(idx);
-				[wAvg, wErr] = stderr(whitePedestal);
-				if length(blackPedestal) > 4 && length(whitePedestal)> 4
-					p = ranksum(abs(blackPedestal-0.5),abs(whitePedestal-0.5));
-				else
-					p = 1;
-				end
-				t = sprintf('TRIAL:%i BLACK=%.2g +- %.2g (%i)| WHITE=%.2g +- %.2g (%i) | P=%.2g [B=%.2g W=%.2g]', task.thisRun, bAvg, bErr, length(blackPedestal), wAvg, wErr, length(whitePedestal), p, mean(abs(blackPedestal-0.5)), mean(abs(whitePedestal-0.5)));
-				title(ana.plotAxis1, t);
-			end
-		else
-			t = sprintf('TRIAL:%i', task.thisRun);
-			title(ana.plotAxis1, t);
-		end
-		box(ana.plotAxis1,'on'); grid(ana.plotAxis1,'on');
-		ylim(ana.plotAxis1,[0 0.6]);
-		xlim(ana.plotAxis1,[0 max(x)+1]);
-		xlabel(ana.plotAxis1,'Trials (red=BLACK blue=WHITE)')
-		ylabel(ana.plotAxis1,'Mask latency (s)')
-		hold(ana.plotAxis1,'off')
 		
-		if ana.useStaircase == true
-			cla(ana.plotAxis2); hold(ana.plotAxis2,'on');
-			if ~isempty(staircaseB.threshold)
-				rB = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
-				outB = ana.PF([staircaseB.threshold(end) ...
-					staircaseB.slope(end) staircaseB.guess(end) ...
-					staircaseB.lapse(end)], rB);
-				plot(ana.plotAxis2,rB,outB,'r-','LineWidth',2);
-				
-				r = staircaseB.response;
-				t = staircaseB.x(1:length(r));
-				yes = r == 1;
-				no = r == 0; 
-				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'ko','MarkerFaceColor','r','MarkerSize',10);
-				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'ro','MarkerFaceColor','w','MarkerSize',10);
-			end
-			if ~isempty(staircaseW.threshold)
-				rW = [min(staircaseB.stimRange):.003:max(staircaseW.stimRange)];
-				outW = ana.PF([staircaseW.threshold(end) ...
-					staircaseW.slope(end) staircaseW.guess(end) ...
-					staircaseW.lapse(end)], rW);
-				plot(ana.plotAxis2,rW,outW,'b--','LineWidth',2);
-				
-				r = staircaseW.response;
-				t = staircaseW.x(1:length(r));
-				yes = r == 1;
-				no = r == 0;
-				plot(ana.plotAxis2,t(yes), ones(1,sum(yes)),'kd','MarkerFaceColor','b','MarkerSize',8);
-				plot(ana.plotAxis2,t(no), zeros(1,sum(no))+ana.gamma,'bd','MarkerFaceColor','w','MarkerSize',8);
-				end
+		
 
-				box(ana.plotAxis2, 'on'); grid(ana.plotAxis2, 'on');
-				ylim(ana.plotAxis2, [ana.gamma 1]);
-				xlim(ana.plotAxis2, [0 0.6]);
-				xlabel(ana.plotAxis2, 'Mask latency (s) (red=BLACK blue=WHITE)');
-				ylabel(ana.plotAxis2, 'Responses');
-				hold(ana.plotAxis2, 'off');
-			
-		end
 		drawnow;
 	end
 
